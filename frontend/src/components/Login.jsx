@@ -41,16 +41,15 @@ export default function Login() {
         body: JSON.stringify(payload),
       });
 
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        throw new Error('Failed to parse server response. Please try again.');
+      }
+
       if (!response.ok) {
-        let errorMessage = 'An error occurred';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || 'Request failed';
-        } catch (e) {
-          // If response is not JSON, try text
-          const textMessage = await response.text();
-          errorMessage = textMessage || `Error: ${response.status}`;
-        }
+        let errorMessage = data?.message || data?.error || 'Request failed';
         
         // Provide specific error messages
         if (errorMessage.includes('Invalid credentials')) {
@@ -65,8 +64,6 @@ export default function Login() {
           throw new Error(`❌ ${errorMessage}`);
         }
       }
-
-      const data = await response.json();
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('currentUser', JSON.stringify(data.user));
       
