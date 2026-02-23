@@ -93,6 +93,14 @@ export class UsersController {
     if (targetUser?.role === 'owner' && currentUser.role !== 'owner') {
       throw new ForbiddenException('Cannot modify owner account');
     }
+
+    // Check if promoting to leader - ensure no other leader in the same group
+    if (dto.role === 'leader' && targetUser?.groupId) {
+      const existingLeader = await this.usersService.findLeaderByGroup(targetUser.groupId);
+      if (existingLeader && existingLeader.id !== id) {
+        throw new ForbiddenException(`Team already has a leader: ${existingLeader.name}. Please remove the current leader first.`);
+      }
+    }
     
     const user = await this.usersService.updateRole(id, dto.role);
     if (!user) {
@@ -139,6 +147,35 @@ export class UsersController {
     }
 
     return this.usersService.remove(id);
+  }
+
+  @Patch(':id/join-team')
+  async joinTeam(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('groupId') groupId: string,
+    @CurrentUser() currentUser: any,
+  ) {
+    // User can only change their own team, or admin/owner can change others
+    if (id !== currentUser.id && currentUser.role !== 'admin' && currentUser.role !== 'owner') {
+      throw new ForbiddenException('You can only change your own team');
+    }
+
+    const user = await this.usersService.findOne(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // When changing teams, reset approval status
+    const updatedUser = await this.usersService.update(id, {
+      groupId,
+    });
+
+    // If user was leader, remove leader role
+    if (user.role === 'leader') {
+      await this.usersService.updateRole(id, 'member');
+    }
+
+    return this.usersService.findOne(id);
   }
 
   @Delete(':id')

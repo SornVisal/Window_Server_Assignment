@@ -55,18 +55,18 @@ export class AuthService {
     
     if (!user) {
       this.logger.warn(`User not found: ${dto.email}`);
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('No account found with this email address');
     }
 
     if (!user.passwordHash) {
       this.logger.warn(`No password hash for user: ${dto.email}`);
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Account has no password set. Please contact administrator.');
     }
 
     const matches = await bcrypt.compare(dto.password, user.passwordHash);
     if (!matches) {
       this.logger.warn(`Password mismatch for user: ${dto.email}`);
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Password is incorrect. Please check and try again.');
     }
 
     this.logger.debug(`Login successful for user: ${dto.email}`);

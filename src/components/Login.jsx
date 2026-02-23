@@ -32,7 +32,7 @@ export default function Login() {
     try {
       const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
       const payload = isRegister
-        ? { name, email, password, groupId: selectedGroup }
+        ? { name, email, password, groupId: selectedGroup || null }
         : { email, password };
 
       const response = await fetch(endpoint, {
@@ -42,8 +42,28 @@ export default function Login() {
       });
 
       if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || 'Login failed');
+        let errorMessage = 'An error occurred';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || 'Request failed';
+        } catch (e) {
+          // If response is not JSON, try text
+          const textMessage = await response.text();
+          errorMessage = textMessage || `Error: ${response.status}`;
+        }
+        
+        // Provide specific error messages
+        if (errorMessage.includes('Invalid credentials')) {
+          throw new Error('❌ Invalid email or password. Please check and try again.');
+        } else if (errorMessage.includes('Email already exists')) {
+          throw new Error('❌ This email is already registered. Please use a different email or sign in.');
+        } else if (errorMessage.includes('User not found')) {
+          throw new Error('❌ No account found with this email. Please sign up first.');
+        } else if (errorMessage.includes('password')) {
+          throw new Error(`❌ Password error: ${errorMessage}`);
+        } else {
+          throw new Error(`❌ ${errorMessage}`);
+        }
       }
 
       const data = await response.json();
@@ -51,14 +71,14 @@ export default function Login() {
       localStorage.setItem('currentUser', JSON.stringify(data.user));
       
       if (isRegister && !data.user.isApproved) {
-        setError('Registration successful! Please wait for your team leader to approve your account.');
+        setError('✅ Registration successful! Please wait for your team leader to approve your account.');
         setIsLoading(false);
         return;
       }
       
       navigate('/group');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -119,7 +139,7 @@ export default function Login() {
 
             {isRegister && (
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Team</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Team <span className="text-xs text-gray-500">(Optional - choose later)</span></label>
                 <select
                   value={selectedGroup}
                   onChange={(e) => setSelectedGroup(e.target.value)}
@@ -127,9 +147,8 @@ export default function Login() {
                   style={{borderColor: '#E5E7EB'}}
                   onFocus={(e) => e.target.style.borderColor = '#831717'}
                   onBlur={(e) => e.target.style.borderColor = '#E5E7EB'}
-                  required={isRegister}
                 >
-                  <option value="">Select your team</option>
+                  <option value="">Skip for now - choose team later</option>
                   {groups.map((group) => (
                     <option key={group.id} value={group.id}>
                       {group.name}
@@ -195,7 +214,11 @@ export default function Login() {
             )}
 
             {error && (
-              <div className="p-3 rounded text-red-700 text-sm font-medium" style={{backgroundColor: '#FEE2E2', borderLeft: '4px solid #831717'}}>
+              <div className={`p-3 rounded text-sm font-medium`} style={{
+                backgroundColor: error.includes('✅') ? '#D1FAE5' : '#FEE2E2',
+                borderLeft: error.includes('✅') ? '4px solid #10B981' : '4px solid #831717',
+                color: error.includes('✅') ? '#047857' : '#991B1B'
+              }}>
                 {error}
               </div>
             )}

@@ -30,6 +30,8 @@ import { UploadSubmissionDto } from './dto/upload-submission.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from '../users/users.service';
 
+const uploadsRoot = join(__dirname, '..', '..', 'uploads');
+
 @Controller('submissions')
 @UseGuards(JwtAuthGuard)
 export class SubmissionsController {
@@ -42,7 +44,7 @@ export class SubmissionsController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: 'uploads',
+        destination: uploadsRoot,
         filename: (_req, file, cb) => {
           const safeExt = extname(file.originalname) || '';
           cb(null, `${randomUUID()}${safeExt}`);
@@ -69,11 +71,26 @@ export class SubmissionsController {
     if (user.role !== 'owner' && user.role !== 'admin' && !user.isApproved) {
       throw new ForbiddenException('Your account must be approved by your team leader before uploading files');
     }
+
+    if (user.role !== 'owner' && user.role !== 'admin') {
+      if (!user.groupId) {
+        throw new ForbiddenException('No group assigned');
+      }
+      if (dto.groupId !== user.groupId) {
+        throw new ForbiddenException('You can only upload for your own group');
+      }
+    }
+
+    const targetGroupId =
+      user.role === 'owner' || user.role === 'admin' ? dto.groupId : user.groupId;
+    if (!targetGroupId) {
+      throw new BadRequestException('Group is required');
+    }
     
     return this.submissionsService.create({
-      groupId: dto.groupId,
+      groupId: targetGroupId,
       title: dto.title,
-      uploadedBy: dto.uploadedBy,
+      uploadedBy: user.id,
       fileUrl: `/uploads/${file.filename}`,
     });
   }
@@ -108,7 +125,7 @@ export class SubmissionsController {
       throw new NotFoundException('Invalid file path');
     }
     
-    const filePath = join(process.cwd(), 'uploads', filename);
+    const filePath = join(uploadsRoot, filename);
 
     if (!existsSync(filePath)) {
       throw new NotFoundException('File not found');
@@ -212,7 +229,7 @@ export class SubmissionsController {
       throw new NotFoundException('Invalid file path');
     }
     
-    const filePath = join(process.cwd(), 'uploads', filename);
+    const filePath = join(uploadsRoot, filename);
 
     if (!existsSync(filePath)) {
       throw new NotFoundException('File not found');

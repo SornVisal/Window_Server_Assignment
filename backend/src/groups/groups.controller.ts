@@ -17,7 +17,6 @@ import { SubmissionsService } from '../submissions/submissions.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('groups')
-@UseGuards(JwtAuthGuard)
 export class GroupsController {
   constructor(
     private readonly groupsService: GroupsService,
@@ -25,6 +24,7 @@ export class GroupsController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   create(@Body() dto: CreateGroupDto) {
     return this.groupsService.create(dto);
   }
@@ -35,6 +35,7 @@ export class GroupsController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     const group = await this.groupsService.findOne(id);
     if (!group) {
@@ -44,11 +45,13 @@ export class GroupsController {
   }
 
   @Get(':id/submissions')
+  @UseGuards(JwtAuthGuard)
   async findSubmissions(@Param('id', ParseUUIDPipe) id: string) {
     return this.submissionsService.findByGroupId(id);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateGroupDto,
@@ -61,6 +64,7 @@ export class GroupsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     const group = await this.groupsService.remove(id);
     if (!group) {

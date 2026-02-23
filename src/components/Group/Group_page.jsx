@@ -14,6 +14,7 @@ export default function Group_page() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
   const token = localStorage.getItem('accessToken');
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
 
@@ -150,6 +151,33 @@ export default function Group_page() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('currentUser');
     navigate('/');
+  };
+
+  const handleJoinTeam = async (groupId) => {
+    if (!token) {
+      setError('Please sign in first.');
+      return;
+    }
+    try {
+      const response = await fetch(`/api/users/${currentUser.id}/join-team`, {
+        method: 'PATCH',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ groupId }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to join team');
+      }
+      // Update current user
+      const updatedUser = await response.json();
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      setShowTeamModal(false);
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to join team');
+    }
   };
 
   const handleView = async (submissionId) => {
@@ -336,6 +364,60 @@ export default function Group_page() {
       </header>
 
       <div className="flex-1 overflow-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto">
+          {/* No Team Alert */}
+          {!currentUser.groupId && (
+            <div className="mb-8 p-6 rounded border-l-4" style={{backgroundColor: '#FEF3C7', borderColor: '#F59E0B'}}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-yellow-900">No Team Selected</p>
+                  <p className="text-xs text-yellow-800 mt-1">You haven't joined a team yet. Please select a team to get started.</p>
+                </div>
+                <button
+                  onClick={() => setShowTeamModal(true)}
+                  className="px-4 py-2 rounded font-semibold text-white hover:opacity-90 transition"
+                  style={{backgroundColor: '#F59E0B'}}
+                >
+                  Choose Team
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Team Selection Modal */}
+          {showTeamModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Select Your Team</h2>
+                <p className="text-sm text-gray-600 mb-6">Choose a team to join. You can change teams later.</p>
+                <div className="space-y-3 max-h-96 overflow-y-auto mb-6">
+                  {groups.map((group) => (
+                    <button
+                      key={group.id}
+                      onClick={() => handleJoinTeam(group.id)}
+                      className="w-full text-left p-4 border-2 rounded hover:bg-gray-50 transition"
+                      style={{borderColor: '#E5E7EB'}}
+                    >
+                      <p className="font-semibold text-gray-900">{group.name}</p>
+                      <p className="text-xs text-gray-600">Leader: {group.leaderName || 'TBD'}</p>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setShowTeamModal(false)}
+                  className="w-full px-4 py-2 border-2 rounded font-semibold transition"
+                  style={{borderColor: '#E5E7EB', color: '#374151'}}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#F3F4F6'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8 max-w-7xl mx-auto">
           {/* Sidebar - Groups */}
           <aside className="h-fit">

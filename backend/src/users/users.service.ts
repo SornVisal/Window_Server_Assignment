@@ -33,7 +33,7 @@ export class UsersService {
         values (LOWER($1), $2, $3)
         returning *
       )
-      select id, email, name, role, created_at as "createdAt" from inserted`,
+      select id, email, name, role, group_id as "groupId", is_approved as "isApproved", created_at as "createdAt" from inserted`,
       [dto.email, dto.name, dto.role ?? 'member'],
     );
     return rows[0];
@@ -95,12 +95,13 @@ export class UsersService {
         set
           email = coalesce(LOWER($1), email),
           name = coalesce($2, name),
-          role = coalesce($3, role)
-        where id = $4
+          role = coalesce($3, role),
+          group_id = coalesce($4, group_id)
+        where id = $5
         returning *
       )
-      select id, email, name, role, created_at as "createdAt" from updated`,
-      [dto.email ?? null, dto.name ?? null, dto.role ?? null, id],
+      select id, email, name, role, group_id as "groupId", is_approved as "isApproved", created_at as "createdAt" from updated`,
+      [dto.email ?? null, dto.name ?? null, dto.role ?? null, dto.groupId ?? null, id],
     );
     return rows[0] ?? null;
   }
@@ -147,6 +148,21 @@ export class UsersService {
   async findPendingByGroup(groupId: string): Promise<UserRow[]> {
     return this.database.query<UserRow>(
       `${this.baseSelect} where group_id = $1 and is_approved = false`,
+      [groupId],
+    );
+  }
+
+  async findLeaderByGroup(groupId: string): Promise<UserRow | null> {
+    const rows = await this.database.query<UserRow>(
+      `${this.baseSelect} where group_id = $1 and role = 'leader'`,
+      [groupId],
+    );
+    return rows[0] ?? null;
+  }
+
+  async findByGroupId(groupId: string): Promise<UserRow[]> {
+    return this.database.query<UserRow>(
+      `${this.baseSelect} where group_id = $1 order by created_at desc`,
       [groupId],
     );
   }
