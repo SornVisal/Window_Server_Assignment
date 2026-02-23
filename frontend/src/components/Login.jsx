@@ -87,7 +87,7 @@ export default function Login() {
       <div className="hidden lg:flex lg:w-[37.5%] relative" style={{backgroundColor: '#831717'}}>
         <div className="absolute inset-0 flex flex-col items-center justify-center p-12">
           <img 
-            src="https://smis.cs.fs.rupp.edu.kh/rupp_logo.png" 
+            src="/rupp_logo.png" 
             alt="RUPP Logo" 
             className="w-32 h-32 object-contain mb-8"
           />
@@ -105,7 +105,7 @@ export default function Login() {
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center mb-8">
             <img 
-              src="https://smis.cs.fs.rupp.edu.kh/rupp_logo.png" 
+              src="/rupp_logo.png" 
               alt="RUPP Logo" 
               className="h-16 w-16 object-contain"
             />
