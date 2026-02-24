@@ -99,6 +99,7 @@ export class SubmissionsController {
   }
 
   @Post()
+  @Roles('admin')
   create(@Body() dto: CreateSubmissionDto) {
     return this.submissionsService.create(dto);
   }
@@ -419,8 +420,19 @@ export class SubmissionsController {
       throw new NotFoundException('User not found');
     }
 
-    if (user.role !== 'owner' && user.role !== 'admin' && user.role !== 'leader') {
-      throw new ForbiddenException('You are not allowed to delete submissions');
+    const existing = await this.submissionsService.findOne(id);
+    if (!existing) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    const isElevated = user.role === 'owner' || user.role === 'admin';
+    if (!isElevated) {
+      if (user.role !== 'leader') {
+        throw new ForbiddenException('You are not allowed to delete submissions');
+      }
+      if (!user.groupId || existing.groupId !== user.groupId) {
+        throw new ForbiddenException('You can only delete submissions from your group');
+      }
     }
 
     const submission = await this.submissionsService.remove(id);

@@ -106,6 +106,25 @@ export class UsersService {
     return rows[0] ?? null;
   }
 
+  async updateGroupAndResetApproval(
+    id: string,
+    groupId: string,
+  ): Promise<UserRow | null> {
+    const rows = await this.database.query<UserRow>(
+      `with updated as (
+        update users
+        set
+          group_id = $1,
+          is_approved = false
+        where id = $2
+        returning *
+      )
+      select id, email, name, role, group_id as "groupId", is_approved as "isApproved", created_at as "createdAt" from updated`,
+      [groupId, id],
+    );
+    return rows[0] ?? null;
+  }
+
   async remove(id: string): Promise<UserRow | null> {
     const rows = await this.database.query<UserRow>(
       `with deleted as (

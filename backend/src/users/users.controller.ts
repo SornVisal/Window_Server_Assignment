@@ -196,9 +196,7 @@ export class UsersController {
     }
 
     // When changing teams, reset approval status
-    const updatedUser = await this.usersService.update(id, {
-      groupId,
-    });
+    const updatedUser = await this.usersService.updateGroupAndResetApproval(id, groupId);
 
     // If user was leader, remove leader role
     if (user.role === 'leader') {
