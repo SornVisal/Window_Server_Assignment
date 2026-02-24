@@ -41,6 +41,20 @@ export default function Group_page() {
     [groups, activeId]
   );
 
+  // Filter groups based on user role
+  const visibleGroups = useMemo(() => {
+    // Admin and owner can see all teams
+    if (currentUser.role === 'admin' || currentUser.role === 'owner') {
+      return groups;
+    }
+    // Leaders and members can only see their own team
+    if (currentUser.groupId) {
+      return groups.filter(g => g.id === currentUser.groupId);
+    }
+    // Users without a team can see all teams (to choose one)
+    return groups;
+  }, [groups, currentUser.role, currentUser.groupId]);
+
   useEffect(() => {
     const fetchGroups = async () => {
       if (!token) {
@@ -57,7 +71,18 @@ export default function Group_page() {
         }
         const data = await response.json();
         setGroups(data);
-        setActiveId(data[0]?.id ?? '');
+        
+        // Set active team based on user role
+        if (currentUser.role === 'admin' || currentUser.role === 'owner') {
+          // Admin/owner start with first team
+          setActiveId(data[0]?.id ?? '');
+        } else if (currentUser.groupId) {
+          // Leaders and members start with their own team
+          setActiveId(currentUser.groupId);
+        } else {
+          // No team selected yet
+          setActiveId(data[0]?.id ?? '');
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load groups');
       } finally {
@@ -456,7 +481,7 @@ export default function Group_page() {
                 <h2 className="font-bold text-gray-900">Teams</h2>
               </div>
               <div className="p-4 space-y-2">
-                {groups.map((g) => {
+                {visibleGroups.map((g) => {
                   const active = g.id === activeId;
                   return (
                     <button
@@ -511,8 +536,8 @@ export default function Group_page() {
                   </div>
                 </div>
 
-                {/* Pending Members Approval (Leaders Only) */}
-                {currentUser.role === 'leader' && (
+                {/* Pending Members Approval (Leaders Only - viewing their own team) */}
+                {currentUser.role === 'leader' && currentUser.groupId === activeId && (
                   <div className="bg-white rounded border" style={{borderColor: '#E5E7EB'}}>
                     <div className="p-4 border-b flex items-center justify-between" style={{borderColor: '#E5E7EB'}}>
                       <div>
