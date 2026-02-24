@@ -5,10 +5,6 @@ import { DatabaseService } from './database/database.service';
 export class AppService {
   constructor(private readonly database: DatabaseService) {}
 
-  getHello(): string {
-    return 'Hello World!';
-  }
-
   async getDbHealth(): Promise<{
     ok: boolean;
     schema: string;
