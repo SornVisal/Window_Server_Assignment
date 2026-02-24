@@ -1029,7 +1029,7 @@ export default function Group_page() {
             )}
 
             {showEditModal && (
-              <div className="fixed inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50">
+              <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50">
                 <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
                   <h3 className="text-lg font-bold text-gray-900 mb-3">Edit Submission</h3>
                   <p className="text-sm text-gray-600 mb-4">Update the submission title.</p>
@@ -1115,7 +1115,7 @@ export default function Group_page() {
             )}
 
             {showDeleteModal && (
-              <div className="fixed inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50">
+              <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50">
                 <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
                   <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Submission</h3>
                   <p className="text-sm text-gray-600 mb-5">This action cannot be undone.</p>
