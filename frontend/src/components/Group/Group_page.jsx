@@ -403,6 +403,40 @@ export default function Group_page() {
             <FiMenu size={24} />
           </button>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t" style={{borderColor: '#E5E7EB'}}>
+            <div className="px-6 py-4 space-y-3">
+              <div className="text-sm text-gray-600 pb-2 border-b" style={{borderColor: '#E5E7EB'}}>
+                Welcome, <span className="font-semibold text-gray-900">{currentUser.name}</span>
+              </div>
+              {(currentUser.role === 'admin' || currentUser.role === 'owner') && (
+                <button
+                  onClick={() => {
+                    navigate('/admin');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-2 text-sm font-semibold rounded transition text-white"
+                  style={{backgroundColor: '#831717'}}
+                >
+                  {currentUser.role === 'owner' ? 'Owner Dashboard' : 'Admin Dashboard'}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  handleSignOut();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full px-4 py-2 text-sm font-semibold rounded transition flex items-center justify-center gap-2"
+                style={{color: '#831717', border: '1px solid #831717'}}
+              >
+                <FiLogOut size={16} />
+                Sign Out
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       <div className="flex-1 overflow-auto px-6 py-8">
