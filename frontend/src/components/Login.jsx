@@ -308,7 +308,7 @@ export default function Login() {
                 <li>✓ Clear browser cache if using public computers</li>
                 <li>✓ Automatically logged out after 5 minutes of inactivity</li>
               </ul>
-            </div>>
+            </div>
             <p>© 2026 Royal University of Phnom Penh</p>
           </div>
         </div>
