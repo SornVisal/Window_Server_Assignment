@@ -36,6 +36,7 @@ export class GroupsController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   findAll() {
     return this.groupsService.findAll();
   }

@@ -15,6 +15,10 @@ export default function Group_page() {
   const [pendingLoading, setPendingLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showError, setShowError] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoadingId, setDeleteLoadingId] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -72,6 +76,12 @@ export default function Group_page() {
   }, [groups]);
 
   useEffect(() => {
+    if (error) {
+      setShowError(true);
+    }
+  }, [error]);
+
+  useEffect(() => {
     const fetchGroups = async () => {
       if (!token) {
         setError('Please sign in first.');
@@ -104,27 +114,27 @@ export default function Group_page() {
     fetchGroups();
   }, [token]);
 
-  useEffect(() => {
-    const fetchSubmissions = async () => {
-      if (!token || !activeId) {
-        setSubmissions([]);
-        return;
+  const loadSubmissions = async () => {
+    if (!token || !activeId) {
+      setSubmissions([]);
+      return;
+    }
+    try {
+      const response = await fetch(`/api/groups/${activeId}/submissions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to load submissions');
       }
-      try {
-        const response = await fetch(`/api/groups/${activeId}/submissions`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) {
-          throw new Error('Failed to load submissions');
-        }
-        const data = await response.json();
-        setSubmissions(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load submissions');
-      }
-    };
+      const data = await response.json();
+      setSubmissions(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load submissions');
+    }
+  };
 
-    fetchSubmissions();
+  useEffect(() => {
+    loadSubmissions();
   }, [token, activeId]);
 
   const fetchPendingMembers = async () => {
@@ -166,6 +176,7 @@ export default function Group_page() {
       return;
     }
     setError('');
+    setUploadLoading(true);
     const formData = new FormData();
     formData.append('file', file);
     formData.append('groupId', activeId);
@@ -185,8 +196,11 @@ export default function Group_page() {
       setSubmissions((prev) => [data, ...prev]);
       setFile(null);
       setTitle('');
+      await loadSubmissions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploadLoading(false);
     }
   };
 
@@ -214,6 +228,7 @@ export default function Group_page() {
       return;
     }
     setError('');
+    setEditLoading(true);
     try {
       let response;
       if (editFile) {
@@ -244,8 +259,11 @@ export default function Group_page() {
       setShowEditModal(false);
       setEditingSubmission(null);
       setEditFile(null);
+      await loadSubmissions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Update failed');
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -259,6 +277,7 @@ export default function Group_page() {
       return;
     }
     setError('');
+    setDeleteLoadingId(submissionId);
     try {
       const response = await fetch(`/api/submissions/${submissionId}`, {
         method: 'DELETE',
@@ -269,8 +288,11 @@ export default function Group_page() {
         throw new Error(errorMessage);
       }
       setSubmissions((prev) => prev.filter((item) => item.id !== submissionId));
+      await loadSubmissions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed');
+    } finally {
+      setDeleteLoadingId('');
     }
   };
 
@@ -687,9 +709,16 @@ export default function Group_page() {
                   >
                     Members: {activeGroup.memberCount ?? 0}/{maxTeamMembers}
                   </p>
-                  {error && (
-                    <div className="mt-4 p-3 rounded text-red-700 text-sm" style={{backgroundColor: '#FECACA', borderLeft: '4px solid #831717'}}>
-                      {error}
+                  {error && showError && (
+                    <div className="mt-4 p-3 rounded text-red-700 text-sm flex items-start justify-between gap-4" style={{backgroundColor: '#FECACA', borderLeft: '4px solid #831717'}}>
+                      <span>{error}</span>
+                      <button
+                        onClick={() => setShowError(false)}
+                        className="text-xs font-semibold"
+                        style={{color: '#7F1D1D'}}
+                      >
+                        Dismiss
+                      </button>
                     </div>
                   )}
                 </div>
@@ -804,6 +833,7 @@ export default function Group_page() {
                             <input
                               type="file"
                               onChange={(e) => setFile(e.target.files?.[0] || null)}
+                              disabled={uploadLoading}
                               className="hidden"
                             />
                             <span className="block px-3.5 py-2 rounded border-2 text-center text-sm font-semibold cursor-pointer transition" style={{borderColor: '#E5E7EB', color: '#831717'}}
@@ -814,12 +844,20 @@ export default function Group_page() {
                           </label>
                           <button
                             onClick={handleUpload}
-                            className="px-6 py-2 rounded font-semibold text-white transition"
+                            disabled={uploadLoading}
+                            className="px-6 py-2 rounded font-semibold text-white transition disabled:opacity-60 disabled:cursor-not-allowed"
                             style={{backgroundColor: '#831717'}}
                             onMouseOver={(e) => e.target.style.backgroundColor = '#6B1214'}
                             onMouseOut={(e) => e.target.style.backgroundColor = '#831717'}
                           >
-                            Upload
+                            {uploadLoading ? (
+                              <span className="inline-flex items-center gap-2">
+                                <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                                Uploading...
+                              </span>
+                            ) : (
+                              'Upload'
+                            )}
                           </button>
                         </div>
                       </div>
@@ -934,7 +972,8 @@ export default function Group_page() {
                                   {canDelete && (
                                     <button
                                       onClick={() => handleDelete(r.id)}
-                                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-semibold transition"
+                                      disabled={deleteLoadingId === r.id}
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed"
                                       style={{
                                         color: '#DC2626',
                                         border: '1px solid #DC2626'
@@ -950,7 +989,14 @@ export default function Group_page() {
                                       title="Delete submission"
                                     >
                                       <FiTrash2 size={14} />
-                                      Delete
+                                      {deleteLoadingId === r.id ? (
+                                        <span className="inline-flex items-center gap-2">
+                                          <span className="h-3 w-3 animate-spin rounded-full border-2 border-red-500 border-t-transparent"></span>
+                                          Deleting...
+                                        </span>
+                                      ) : (
+                                        'Delete'
+                                      )}
                                     </button>
                                   )}
                                 </div>
@@ -1029,6 +1075,7 @@ export default function Group_page() {
                           setEditingSubmission(null);
                           setEditFile(null);
                         }}
+                        disabled={editLoading}
                         className="px-4 py-2 border-2 rounded font-semibold transition"
                         style={{borderColor: '#E5E7EB', color: '#374151'}}
                         onMouseOver={(e) => e.target.style.backgroundColor = '#F3F4F6'}
@@ -1038,12 +1085,20 @@ export default function Group_page() {
                       </button>
                       <button
                         onClick={handleEditSave}
-                        className="px-4 py-2 rounded font-semibold text-white transition"
+                        disabled={editLoading}
+                        className="px-4 py-2 rounded font-semibold text-white transition disabled:opacity-60 disabled:cursor-not-allowed"
                         style={{backgroundColor: '#831717'}}
                         onMouseOver={(e) => e.target.style.backgroundColor = '#6B1214'}
                         onMouseOut={(e) => e.target.style.backgroundColor = '#831717'}
                       >
-                        Save
+                        {editLoading ? (
+                          <span className="inline-flex items-center gap-2">
+                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                            Saving...
+                          </span>
+                        ) : (
+                          'Save'
+                        )}
                       </button>
                     </div>
                   </div>

@@ -54,6 +54,10 @@ export class UsersController {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    if (groupId === user.groupId) {
+      return user;
+    }
     return user;
   }
 
