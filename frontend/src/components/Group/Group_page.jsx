@@ -612,7 +612,7 @@ export default function Group_page() {
         )}
       </header>
 
-      <div className="flex-1 overflow-auto px-6 py-8">
+      <div className="flex-1 overflow-auto px-6 py-8 bg-white">
         <div className="max-w-7xl mx-auto">
           {/* No Team Alert */}
           {!currentUser.groupId && (
