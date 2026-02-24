@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { sessionManager } from '../utils/sessionManager';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -20,6 +21,21 @@ export default function AdminDashboard() {
     setCurrentUserId(user.id);
     fetchData();
   }, [navigate]);
+
+  const readErrorMessage = async (response, fallback) => {
+    try {
+      const data = await response.json();
+      if (Array.isArray(data?.message)) {
+        return data.message.join(', ');
+      }
+      if (typeof data?.message === 'string') {
+        return data.message;
+      }
+    } catch (err) {
+      return fallback;
+    }
+    return fallback;
+  };
 
   const fetchData = async () => {
     try {
@@ -62,7 +78,8 @@ export default function AdminDashboard() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update role');
+        const errorMessage = await readErrorMessage(response, 'Failed to update role');
+        throw new Error(errorMessage);
       }
 
       // Refresh users list
@@ -72,14 +89,14 @@ export default function AdminDashboard() {
     }
   };
 
+
   const getGroupName = (groupId) => {
     const group = groups.find(g => g.id === groupId);
     return group ? group.name : 'No Team';
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('currentUser');
+    sessionManager.clearSession();
     navigate('/');
   };
 
@@ -268,25 +285,52 @@ export default function AdminDashboard() {
                             </>
                           )}
                           
-                          {/* Admin can only manage leaders */}
+                          {/* Admin can manage admins and leaders */}
                           {currentUserRole === 'admin' && user.role !== 'admin' && (
                             <>
                               {user.role === 'member' && (
-                                <button
-                                  onClick={() => handleRoleChange(user.id, 'leader')}
-                                  className="text-white px-3 py-1 rounded text-xs font-medium hover:opacity-90"
-                                  style={{backgroundColor: '#831717'}}
-                                >
-                                  Make Leader
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => handleRoleChange(user.id, 'admin')}
+                                    className="text-white px-3 py-1 rounded text-xs font-medium hover:opacity-90"
+                                    style={{backgroundColor: '#7C3AED'}}
+                                  >
+                                    Make Admin
+                                  </button>
+                                  <button
+                                    onClick={() => handleRoleChange(user.id, 'leader')}
+                                    className="text-white px-3 py-1 rounded text-xs font-medium hover:opacity-90"
+                                    style={{backgroundColor: '#831717'}}
+                                  >
+                                    Make Leader
+                                  </button>
+                                </>
                               )}
                               {user.role === 'leader' && (
+                                <>
+                                  <button
+                                    onClick={() => handleRoleChange(user.id, 'admin')}
+                                    className="text-white px-3 py-1 rounded text-xs font-medium hover:opacity-90"
+                                    style={{backgroundColor: '#7C3AED'}}
+                                  >
+                                    Promote to Admin
+                                  </button>
+                                  <button
+                                    onClick={() => handleRoleChange(user.id, 'member')}
+                                    className="border px-3 py-1 rounded text-xs font-medium hover:bg-gray-50"
+                                    style={{borderColor: '#831717', color: '#831717'}}
+                                  >
+                                    Revoke Leader
+                                  </button>
+                                </>
+                              )}
+                              {user.role === 'admin' && (
                                 <button
                                   onClick={() => handleRoleChange(user.id, 'member')}
                                   className="border px-3 py-1 rounded text-xs font-medium hover:bg-gray-50"
-                                  style={{borderColor: '#831717', color: '#831717'}}
+                                  style={{borderColor: '#DC2626', color: '#DC2626'}}
                                 >
-                                  Revoke Leader
+                                  Revoke Admin
                                 </button>
                               )}
                             </>

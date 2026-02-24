@@ -81,11 +81,9 @@ export class UsersController {
     @Body() dto: UpdateRoleDto,
     @CurrentUser() currentUser: any,
   ) {
-    // Only owner can promote to admin or change owner role
-    if (dto.role === 'admin' || dto.role === 'owner') {
-      if (currentUser.role !== 'owner') {
-        throw new ForbiddenException('Only owner can manage admin accounts');
-      }
+    // Only owner can assign owner role
+    if (dto.role === 'owner' && currentUser.role !== 'owner') {
+      throw new ForbiddenException('Only owner can assign owner role');
     }
     
     // Prevent changing owner account
@@ -121,7 +119,7 @@ export class UsersController {
       throw new NotFoundException('User not found');
     }
 
-    // Check if the current user is the leader of the same group
+    // Leaders can only approve users in their own group
     if (userToApprove.groupId !== currentUser.groupId) {
       throw new ForbiddenException('You can only approve users in your own group');
     }
@@ -141,7 +139,7 @@ export class UsersController {
       throw new NotFoundException('User not found');
     }
 
-    // Check if the current user is the leader of the same group
+    // Leaders can only reject users in their own group
     if (userToReject.groupId !== currentUser.groupId) {
       throw new ForbiddenException('You can only reject users in your own group');
     }

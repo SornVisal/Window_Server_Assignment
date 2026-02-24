@@ -1,6 +1,7 @@
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom';
+import { sessionManager } from '../utils/sessionManager';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -66,6 +67,7 @@ export default function Login() {
       }
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('currentUser', JSON.stringify(data.user));
+      sessionManager.setLoginSession();
       
       if (isRegister && !data.user.isApproved) {
         setError('✅ Registration successful! Please wait for your team leader to approve your account.');

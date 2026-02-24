@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { FiUpload, FiMenu, FiLogOut, FiDownload, FiEye } from "react-icons/fi";
+import { sessionManager } from '../../utils/sessionManager';
 
 export default function Group_page() {
   const navigate = useNavigate();
@@ -11,12 +12,29 @@ export default function Group_page() {
   const [title, setTitle] = useState("");
   const [submissions, setSubmissions] = useState([]);
   const [pendingMembers, setPendingMembers] = useState([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const token = localStorage.getItem('accessToken');
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  const maxFileSizeBytes = 50 * 1024 * 1024;
+
+  const readErrorMessage = async (response, fallback) => {
+    try {
+      const data = await response.json();
+      if (Array.isArray(data?.message)) {
+        return data.message.join(', ');
+      }
+      if (typeof data?.message === 'string') {
+        return data.message;
+      }
+    } catch (err) {
+      return fallback;
+    }
+    return fallback;
+  };
 
   const activeGroup = useMemo(
     () => groups.find((g) => g.id === activeId),
@@ -73,31 +91,38 @@ export default function Group_page() {
     fetchSubmissions();
   }, [token, activeId]);
 
-  useEffect(() => {
-    const fetchPendingMembers = async () => {
-      if (!token || currentUser.role !== 'leader') {
-        return;
+  const fetchPendingMembers = async () => {
+    if (!token || currentUser.role !== 'leader') {
+      return;
+    }
+    setPendingLoading(true);
+    try {
+      const response = await fetch('/api/users/pending', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to load pending members');
       }
-      try {
-        const response = await fetch('/api/users/pending', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) {
-          throw new Error('Failed to load pending members');
-        }
-        const data = await response.json();
-        setPendingMembers(data);
-      } catch (err) {
-        console.error(err instanceof Error ? err.message : 'Failed to load pending members');
-      }
-    };
+      const data = await response.json();
+      setPendingMembers(data);
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : 'Failed to load pending members');
+    } finally {
+      setPendingLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchPendingMembers();
   }, [token, currentUser.role]);
 
   const handleUpload = async () => {
     if (!file || !activeId || !title) {
       setError('Please choose a file and add a title.');
+      return;
+    }
+    if (file.size > maxFileSizeBytes) {
+      setError('File is too large. Max size is 50MB.');
       return;
     }
     if (!token) {
@@ -117,7 +142,8 @@ export default function Group_page() {
         body: formData,
       });
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errorMessage = await readErrorMessage(response, 'Upload failed');
+        throw new Error(errorMessage);
       }
       const data = await response.json();
       setSubmissions((prev) => [data, ...prev]);
@@ -148,8 +174,7 @@ export default function Group_page() {
   const fileName = file?.name || "No file selected";
 
   const handleSignOut = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('currentUser');
+    sessionManager.clearSession();
     navigate('/');
   };
 
@@ -168,7 +193,8 @@ export default function Group_page() {
         body: JSON.stringify({ groupId }),
       });
       if (!response.ok) {
-        throw new Error('Failed to join team');
+        const errorMessage = await readErrorMessage(response, 'Failed to join team');
+        throw new Error(errorMessage);
       }
       // Update current user
       const updatedUser = await response.json();
@@ -190,7 +216,8 @@ export default function Group_page() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
-        throw new Error('Failed to view file');
+        const errorMessage = await readErrorMessage(response, 'Failed to view file');
+        throw new Error(errorMessage);
       }
       
       const contentType = response.headers.get('Content-Type');
@@ -231,7 +258,8 @@ export default function Group_page() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
-        throw new Error('Download failed');
+        const errorMessage = await readErrorMessage(response, 'Download failed');
+        throw new Error(errorMessage);
       }
       
       // Extract filename from Content-Disposition header
@@ -269,7 +297,8 @@ export default function Group_page() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
-        throw new Error('Failed to approve user');
+        const errorMessage = await readErrorMessage(response, 'Failed to approve user');
+        throw new Error(errorMessage);
       }
       // Remove from pending list
       setPendingMembers((prev) => prev.filter((m) => m.id !== userId));
@@ -289,7 +318,8 @@ export default function Group_page() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
-        throw new Error('Failed to reject user');
+        const errorMessage = await readErrorMessage(response, 'Failed to reject user');
+        throw new Error(errorMessage);
       }
       // Remove from pending list
       setPendingMembers((prev) => prev.filter((m) => m.id !== userId));
@@ -482,37 +512,53 @@ export default function Group_page() {
                 </div>
 
                 {/* Pending Members Approval (Leaders Only) */}
-                {currentUser.role === 'leader' && pendingMembers.length > 0 && (
+                {currentUser.role === 'leader' && (
                   <div className="bg-white rounded border" style={{borderColor: '#E5E7EB'}}>
-                    <div className="p-4 border-b" style={{borderColor: '#E5E7EB'}}>
-                      <h3 className="font-bold text-gray-900">Pending Member Approvals</h3>
-                      <p className="text-sm text-gray-600 mt-1">Review and approve new team members</p>
+                    <div className="p-4 border-b flex items-center justify-between" style={{borderColor: '#E5E7EB'}}>
+                      <div>
+                        <h3 className="font-bold text-gray-900">Pending Member Approvals</h3>
+                        <p className="text-sm text-gray-600 mt-1">Review and approve new team members</p>
+                      </div>
+                      <button
+                        onClick={fetchPendingMembers}
+                        className="px-3 py-1.5 text-xs font-semibold rounded border hover:bg-gray-50"
+                        style={{borderColor: '#E5E7EB', color: '#374151'}}
+                        disabled={pendingLoading}
+                      >
+                        {pendingLoading ? 'Refreshing...' : 'Refresh'}
+                      </button>
                     </div>
                     <div className="divide-y" style={{borderColor: '#E5E7EB'}}>
-                      {pendingMembers.map((member) => (
-                        <div key={member.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                          <div>
-                            <p className="font-semibold text-gray-900">{member.name}</p>
-                            <p className="text-sm text-gray-600">{member.email}</p>
+                      {pendingLoading ? (
+                        <div className="p-4 text-sm text-gray-600">Loading pending members...</div>
+                      ) : pendingMembers.length === 0 ? (
+                        <div className="p-4 text-sm text-gray-600">No pending members right now.</div>
+                      ) : (
+                        pendingMembers.map((member) => (
+                          <div key={member.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
+                            <div>
+                              <p className="font-semibold text-gray-900">{member.name}</p>
+                              <p className="text-sm text-gray-600">{member.email}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleApprove(member.id)}
+                                className="px-4 py-2 text-sm font-semibold rounded text-white hover:opacity-90 transition"
+                                style={{backgroundColor: '#16A34A'}}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleReject(member.id)}
+                                className="px-4 py-2 text-sm font-semibold rounded text-white hover:opacity-90 transition"
+                                style={{backgroundColor: '#DC2626'}}
+                              >
+                                Reject
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleApprove(member.id)}
-                              className="px-4 py-2 text-sm font-semibold rounded text-white hover:opacity-90 transition"
-                              style={{backgroundColor: '#16A34A'}}
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleReject(member.id)}
-                              className="px-4 py-2 text-sm font-semibold rounded text-white hover:opacity-90 transition"
-                              style={{backgroundColor: '#DC2626'}}
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
