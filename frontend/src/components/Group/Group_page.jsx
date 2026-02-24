@@ -1032,11 +1032,8 @@ export default function Group_page() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      </div>
 
-      {showEditModal && (
+            {showEditModal && (
               <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50">
                 <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
                   <h3 className="text-lg font-bold text-gray-900 mb-3">Edit Submission</h3>
@@ -1166,5 +1163,134 @@ export default function Group_page() {
         </div>
       </div>
     </div>
+
+    {/* Modals - outside blur wrapper */}
+    {showEditModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+          <h3 className="text-lg font-bold text-gray-900 mb-3">Edit Submission</h3>
+          <p className="text-sm text-gray-600 mb-4">Update the submission title.</p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Title</label>
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full px-3.5 py-2 border-2 rounded text-gray-900 placeholder-gray-400 focus:outline-none transition"
+                style={{borderColor: '#E5E7EB'}}
+                onFocus={(e) => e.target.style.borderColor = '#831717'}
+                onBlur={(e) => e.target.style.borderColor = '#E5E7EB'}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Replace file (optional)</label>
+              <label className="flex items-center gap-3 w-full">
+                <input
+                  type="file"
+                  onChange={(e) => setEditFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                />
+                <span
+                  className="flex-1 px-3.5 py-2 rounded border-2 text-sm font-semibold cursor-pointer transition"
+                  style={{borderColor: '#E5E7EB', color: '#831717'}}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#FEE2E2'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                >
+                  {editFile ? `✓ ${editFile.name}` : 'Choose file'}
+                </span>
+                {editFile && (
+                  <button
+                    type="button"
+                    onClick={() => setEditFile(null)}
+                    className="px-3 py-2 text-xs font-semibold rounded border transition"
+                    style={{borderColor: '#E5E7EB', color: '#6B7280'}}
+                    onMouseOver={(e) => e.target.style.backgroundColor = '#F3F4F6'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                  >
+                    Clear
+                  </button>
+                )}
+              </label>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingSubmission(null);
+                  setEditFile(null);
+                }}
+                disabled={editLoading}
+                className="px-4 py-2 border-2 rounded font-semibold transition"
+                style={{borderColor: '#E5E7EB', color: '#374151'}}
+                onMouseOver={(e) => e.target.style.backgroundColor = '#F3F4F6'}
+                onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditSave}
+                disabled={editLoading}
+                className="px-4 py-2 rounded font-semibold text-white transition disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{backgroundColor: '#831717'}}
+                onMouseOver={(e) => e.target.style.backgroundColor = '#6B1214'}
+                onMouseOut={(e) => e.target.style.backgroundColor = '#831717'}
+              >
+                {editLoading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                    Saving...
+                  </span>
+                ) : (
+                  'Save'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {showDeleteModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Submission</h3>
+          <p className="text-sm text-gray-600 mb-5">This action cannot be undone.</p>
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => {
+                setShowDeleteModal(false);
+                setDeleteTarget(null);
+              }}
+              disabled={deleteLoadingId !== ''}
+              className="px-4 py-2 border-2 rounded font-semibold transition"
+              style={{borderColor: '#E5E7EB', color: '#374151'}}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#F3F4F6'}
+              onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              disabled={deleteLoadingId !== ''}
+              className="px-4 py-2 rounded font-semibold text-white transition disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{backgroundColor: '#DC2626'}}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#B91C1C'}
+              onMouseOut={(e) => e.target.style.backgroundColor = '#DC2626'}
+            >
+              {deleteLoadingId !== '' ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                  Deleting...
+                </span>
+              ) : (
+                'Delete'
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
   )
 }
