@@ -117,16 +117,18 @@ export class UsersService {
     return rows[0] ?? null;
   }
 
-  async updateRole(id: string, role: string): Promise<UserRow | null> {
+  async updateRole(id: string, role: string, groupId?: string): Promise<UserRow | null> {
     const rows = await this.database.query<UserRow>(
       `with updated as (
         update users
-        set role = $1
-        where id = $2
+        set
+          role = $1,
+          group_id = coalesce($2, group_id)
+        where id = $3
         returning *
       )
       select id, email, name, role, group_id as "groupId", is_approved as "isApproved", created_at as "createdAt" from updated`,
-      [role, id],
+      [role, groupId ?? null, id],
     );
     return rows[0] ?? null;
   }
@@ -165,5 +167,13 @@ export class UsersService {
       `${this.baseSelect} where group_id = $1 order by created_at desc`,
       [groupId],
     );
+  }
+
+  async countApprovedMembersByGroup(groupId: string): Promise<number> {
+    const rows = await this.database.query<{ count: string }>(
+      `select count(*) as count from users where group_id = $1 and is_approved = true`,
+      [groupId],
+    );
+    return parseInt(rows[0]?.count ?? '0', 10);
   }
 }

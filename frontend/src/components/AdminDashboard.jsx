@@ -10,6 +10,7 @@ export default function AdminDashboard() {
   const [error, setError] = useState('');
   const [currentUserRole, setCurrentUserRole] = useState('');
   const [currentUserId, setCurrentUserId] = useState('');
+  const [leaderTeamSelections, setLeaderTeamSelections] = useState({});
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('currentUser'));
@@ -65,7 +66,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleRoleChange = async (userId, newRole) => {
+  const handleRoleChange = async (userId, newRole, groupId) => {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await fetch(`/api/users/${userId}/role`, {
@@ -74,7 +75,7 @@ export default function AdminDashboard() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ role: newRole })
+        body: JSON.stringify({ role: newRole, groupId })
       });
 
       if (!response.ok) {
@@ -93,6 +94,10 @@ export default function AdminDashboard() {
   const getGroupName = (groupId) => {
     const group = groups.find(g => g.id === groupId);
     return group ? group.name : 'No Team';
+  };
+
+  const getLeaderTargetGroupId = (user) => {
+    return leaderTeamSelections[user.id] ?? user.groupId ?? '';
   };
 
   const handleLogout = () => {
@@ -234,6 +239,26 @@ export default function AdminDashboard() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {user.role !== 'owner' && user.id !== currentUserId && (
                         <div className="flex space-x-2">
+                          {user.role === 'member' && (currentUserRole === 'admin' || currentUserRole === 'owner') && (
+                            <select
+                              value={getLeaderTargetGroupId(user)}
+                              onChange={(event) =>
+                                setLeaderTeamSelections((prev) => ({
+                                  ...prev,
+                                  [user.id]: event.target.value,
+                                }))
+                              }
+                              className="border px-2 py-1 rounded text-xs text-gray-700 bg-white"
+                              style={{borderColor: '#E5E7EB'}}
+                            >
+                              <option value="">Select team</option>
+                              {groups.map((group) => (
+                                <option key={group.id} value={group.id}>
+                                  {group.name}
+                                </option>
+                              ))}
+                            </select>
+                          )}
                           {/* Owner can manage admins and leaders */}
                           {currentUserRole === 'owner' && (
                             <>
@@ -247,7 +272,14 @@ export default function AdminDashboard() {
                                     Make Admin
                                   </button>
                                   <button
-                                    onClick={() => handleRoleChange(user.id, 'leader')}
+                                    onClick={() => {
+                                      const groupId = getLeaderTargetGroupId(user);
+                                      if (!groupId) {
+                                        setError('Select a team before assigning leader');
+                                        return;
+                                      }
+                                      handleRoleChange(user.id, 'leader', groupId);
+                                    }}
                                     className="text-white px-3 py-1 rounded text-xs font-medium hover:opacity-90"
                                     style={{backgroundColor: '#831717'}}
                                   >
@@ -298,7 +330,14 @@ export default function AdminDashboard() {
                                     Make Admin
                                   </button>
                                   <button
-                                    onClick={() => handleRoleChange(user.id, 'leader')}
+                                    onClick={() => {
+                                      const groupId = getLeaderTargetGroupId(user);
+                                      if (!groupId) {
+                                        setError('Select a team before assigning leader');
+                                        return;
+                                      }
+                                      handleRoleChange(user.id, 'leader', groupId);
+                                    }}
                                     className="text-white px-3 py-1 rounded text-xs font-medium hover:opacity-90"
                                     style={{backgroundColor: '#831717'}}
                                   >

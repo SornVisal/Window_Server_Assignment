@@ -1,5 +1,5 @@
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { sessionManager } from '../utils/sessionManager';
 
@@ -11,20 +11,8 @@ export default function Login() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState('');
-  const [groups, setGroups] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-
-  // Fetch groups when switching to register mode
-  useEffect(() => {
-    if (isRegister) {
-      fetch('/api/groups')
-        .then(res => res.json())
-        .then(data => setGroups(data))
-        .catch(err => console.error('Failed to fetch groups:', err));
-    }
-  }, [isRegister]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -33,7 +21,7 @@ export default function Login() {
     try {
       const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
       const payload = isRegister
-        ? { name, email, password, groupId: selectedGroup || null }
+        ? { name, email, password, groupId: null }
         : { email, password };
 
       const response = await fetch(endpoint, {
@@ -65,16 +53,17 @@ export default function Login() {
           throw new Error(`❌ ${errorMessage}`);
         }
       }
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('currentUser', JSON.stringify(data.user));
-      sessionManager.setLoginSession();
-      
       if (isRegister && !data.user.isApproved) {
-        setError('✅ Registration successful! Please wait for your team leader to approve your account.');
+        setError('✅ Registration successful! Please sign in and wait for your team leader to approve your account.');
+        setIsRegister(false);
         setIsLoading(false);
         return;
       }
-      
+
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('currentUser', JSON.stringify(data.user));
+      sessionManager.setLoginSession();
+
       navigate('/group');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
@@ -136,26 +125,6 @@ export default function Login() {
               </div>
             )}
 
-            {isRegister && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Team <span className="text-xs text-gray-500">(Optional - choose later)</span></label>
-                <select
-                  value={selectedGroup}
-                  onChange={(e) => setSelectedGroup(e.target.value)}
-                  className="w-full px-3.5 py-2 border-2 rounded text-gray-900 focus:outline-none transition bg-white"
-                  style={{borderColor: '#E5E7EB'}}
-                  onFocus={(e) => e.target.style.borderColor = '#831717'}
-                  onBlur={(e) => e.target.style.borderColor = '#E5E7EB'}
-                >
-                  <option value="">Skip for now - choose team later</option>
-                  {groups.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
 
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">Email</label>

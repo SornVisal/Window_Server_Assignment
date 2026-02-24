@@ -92,15 +92,28 @@ export class UsersController {
       throw new ForbiddenException('Cannot modify owner account');
     }
 
-    // Check if promoting to leader - ensure no other leader in the same group
-    if (dto.role === 'leader' && targetUser?.groupId) {
-      const existingLeader = await this.usersService.findLeaderByGroup(targetUser.groupId);
+    const groupIdToAssign = dto.groupId ?? targetUser?.groupId ?? null;
+
+    // Check if promoting to leader - ensure team selected and only one leader per team
+    if (dto.role === 'leader') {
+      if (!groupIdToAssign) {
+        throw new ForbiddenException('Leader must belong to a team');
+      }
+      const existingLeader = await this.usersService.findLeaderByGroup(groupIdToAssign);
       if (existingLeader && existingLeader.id !== id) {
         throw new ForbiddenException(`Team already has a leader: ${existingLeader.name}. Please remove the current leader first.`);
       }
     }
+
+    // Check team capacity if assigning to a new team (max 10 approved members per team)
+    if (dto.groupId && dto.groupId !== targetUser?.groupId) {
+      const currentMemberCount = await this.usersService.countApprovedMembersByGroup(dto.groupId);
+      if (currentMemberCount >= 10) {
+        throw new ForbiddenException('Team is full. Maximum 10 members allowed per team.');
+      }
+    }
     
-    const user = await this.usersService.updateRole(id, dto.role);
+    const user = await this.usersService.updateRole(id, dto.role, dto.groupId);
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -119,9 +132,18 @@ export class UsersController {
       throw new NotFoundException('User not found');
     }
 
-    // Leaders can only approve users in their own group
+    // Leaders must belong to a team and can only approve users in their own group
+    if (!currentUser.groupId || !userToApprove.groupId) {
+      throw new ForbiddenException('Leader must belong to a team to approve users');
+    }
     if (userToApprove.groupId !== currentUser.groupId) {
       throw new ForbiddenException('You can only approve users in your own group');
+    }
+
+    // Check team member capacity (max 10 members)
+    const currentMemberCount = await this.usersService.countApprovedMembersByGroup(userToApprove.groupId);
+    if (currentMemberCount >= 10) {
+      throw new ForbiddenException('Team is full. Maximum 10 members allowed per team.');
     }
 
     return this.usersService.approveUser(id);
@@ -139,7 +161,10 @@ export class UsersController {
       throw new NotFoundException('User not found');
     }
 
-    // Leaders can only reject users in their own group
+    // Leaders must belong to a team and can only reject users in their own group
+    if (!currentUser.groupId || !userToReject.groupId) {
+      throw new ForbiddenException('Leader must belong to a team to reject users');
+    }
     if (userToReject.groupId !== currentUser.groupId) {
       throw new ForbiddenException('You can only reject users in your own group');
     }
