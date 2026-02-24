@@ -176,4 +176,12 @@ export class UsersService {
     );
     return parseInt(rows[0]?.count ?? '0', 10);
   }
+
+  async countMembersByGroup(groupId: string): Promise<number> {
+    const rows = await this.database.query<{ count: string }>(
+      `select count(*) as count from users where group_id = $1`,
+      [groupId],
+    );
+    return parseInt(rows[0]?.count ?? '0', 10);
+  }
 }

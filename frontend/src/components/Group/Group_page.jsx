@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FiUpload, FiMenu, FiLogOut, FiDownload, FiEye } from "react-icons/fi";
+import { FiUpload, FiMenu, FiLogOut, FiDownload, FiEye, FiEdit2, FiTrash2 } from "react-icons/fi";
 import { sessionManager } from '../../utils/sessionManager';
 
 export default function Group_page() {
@@ -17,9 +17,24 @@ export default function Group_page() {
   const [error, setError] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingSubmission, setEditingSubmission] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editFile, setEditFile] = useState(null);
   const token = localStorage.getItem('accessToken');
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
   const maxFileSizeBytes = 50 * 1024 * 1024;
+  const maxTeamMembers = 10;
+
+  const getMemberTone = (count) => {
+    if (count >= maxTeamMembers) {
+      return { text: '#991B1B', bg: '#FEE2E2' };
+    }
+    if (count >= maxTeamMembers - 2) {
+      return { text: '#B45309', bg: '#FEF3C7' };
+    }
+    return { text: '#6B7280', bg: 'transparent' };
+  };
 
   const readErrorMessage = async (response, fallback) => {
     try {
@@ -40,6 +55,15 @@ export default function Group_page() {
     () => groups.find((g) => g.id === activeId),
     [groups, activeId]
   );
+
+  const isAdminOwner = currentUser.role === 'admin' || currentUser.role === 'owner';
+  const isLeader = currentUser.role === 'leader';
+  const isMember = currentUser.role === 'member';
+  const isGroupMatch = currentUser.groupId && currentUser.groupId === activeId;
+  const canUpload = isAdminOwner || (isLeader && isGroupMatch) || (isMember && currentUser.isApproved && isGroupMatch);
+  const canViewDownload = isAdminOwner || ((isLeader || isMember) && isGroupMatch);
+  const canEdit = isAdminOwner || (isLeader && isGroupMatch);
+  const canDelete = isAdminOwner || (isLeader && isGroupMatch);
 
   // Filter groups based on user role
   const visibleGroups = useMemo(() => {
@@ -166,6 +190,90 @@ export default function Group_page() {
     }
   };
 
+  const handleEditClick = (submission) => {
+    setEditingSubmission(submission);
+    setEditTitle(submission.title || '');
+    setEditFile(null);
+    setShowEditModal(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingSubmission) {
+      return;
+    }
+    if (!editTitle.trim()) {
+      setError('Title is required.');
+      return;
+    }
+    if (!token) {
+      setError('Please sign in first.');
+      return;
+    }
+    if (editFile && editFile.size > maxFileSizeBytes) {
+      setError('File is too large. Max size is 50MB.');
+      return;
+    }
+    setError('');
+    try {
+      let response;
+      if (editFile) {
+        const formData = new FormData();
+        formData.append('file', editFile);
+        formData.append('title', editTitle.trim());
+        response = await fetch(`/api/submissions/${editingSubmission.id}/upload`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+      } else {
+        response = await fetch(`/api/submissions/${editingSubmission.id}`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ title: editTitle.trim() }),
+        });
+      }
+      if (!response.ok) {
+        const errorMessage = await readErrorMessage(response, 'Update failed');
+        throw new Error(errorMessage);
+      }
+      const updated = await response.json();
+      setSubmissions((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setShowEditModal(false);
+      setEditingSubmission(null);
+      setEditFile(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Update failed');
+    }
+  };
+
+  const handleDelete = async (submissionId) => {
+    if (!token) {
+      setError('Please sign in first.');
+      return;
+    }
+    const confirmed = window.confirm('Delete this submission? This action cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+    setError('');
+    try {
+      const response = await fetch(`/api/submissions/${submissionId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        const errorMessage = await readErrorMessage(response, 'Delete failed');
+        throw new Error(errorMessage);
+      }
+      setSubmissions((prev) => prev.filter((item) => item.id !== submissionId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Delete failed');
+    }
+  };
+
   const rows = useMemo(() => {
     return submissions.map((item, index) => ({
       no: index + 1,
@@ -206,6 +314,9 @@ export default function Group_page() {
       });
       if (!response.ok) {
         const errorMessage = await readErrorMessage(response, 'Failed to join team');
+        if (errorMessage.includes('Team is full')) {
+          throw new Error('Team is full (max 10 members). Please choose another team.');
+        }
         throw new Error(errorMessage);
       }
       // Update current user
@@ -310,6 +421,9 @@ export default function Group_page() {
       });
       if (!response.ok) {
         const errorMessage = await readErrorMessage(response, 'Failed to approve user');
+        if (errorMessage.includes('Team is full')) {
+          throw new Error('Team is full (max 10 members). Remove a member before approving.');
+        }
         throw new Error(errorMessage);
       }
       // Remove from pending list
@@ -467,17 +581,34 @@ export default function Group_page() {
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Select Your Team</h2>
                 <p className="text-sm text-gray-600 mb-6">Choose a team to join. You can change teams later.</p>
                 <div className="space-y-3 max-h-96 overflow-y-auto mb-6">
-                  {groups.map((group) => (
-                    <button
-                      key={group.id}
-                      onClick={() => handleJoinTeam(group.id)}
-                      className="w-full text-left p-4 border-2 rounded hover:bg-gray-50 transition"
-                      style={{borderColor: '#E5E7EB'}}
-                    >
-                      <p className="font-semibold text-gray-900">{group.name}</p>
-                      <p className="text-xs text-gray-600">Leader: {group.leaderName || 'TBD'}</p>
-                    </button>
-                  ))}
+                  {groups.map((group) => {
+                    const memberCount = group.memberCount ?? 0;
+                    const isFull = memberCount >= maxTeamMembers;
+                    const tone = getMemberTone(memberCount);
+                    return (
+                      <button
+                        key={group.id}
+                        onClick={() => handleJoinTeam(group.id)}
+                        disabled={isFull}
+                        className="w-full text-left p-4 border-2 rounded transition disabled:opacity-60 disabled:cursor-not-allowed"
+                        style={{borderColor: '#E5E7EB'}}
+                        onMouseOver={(e) => !isFull && (e.currentTarget.style.backgroundColor = '#F9FAFB')}
+                        onMouseOut={(e) => !isFull && (e.currentTarget.style.backgroundColor = 'transparent')}
+                        title={isFull ? 'Team is full (max 10 members)' : 'Join team'}
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-gray-900">{group.name}</p>
+                          {isFull && (
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{backgroundColor: '#FEE2E2', color: '#991B1B'}}>
+                              Full
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600">Leader: {group.leaderName || 'TBD'}</p>
+                        <p className="text-xs" style={{color: tone.text}}>Members: {memberCount}/{maxTeamMembers}</p>
+                      </button>
+                    );
+                  })}
                 </div>
                 <button
                   onClick={() => setShowTeamModal(false)}
@@ -504,6 +635,9 @@ export default function Group_page() {
               <div className="p-4 space-y-2">
                 {visibleGroups.map((g) => {
                   const active = g.id === activeId;
+                  const memberCount = g.memberCount ?? 0;
+                  const isFull = memberCount >= maxTeamMembers;
+                  const tone = getMemberTone(memberCount);
                   return (
                     <button
                       key={g.id}
@@ -518,7 +652,20 @@ export default function Group_page() {
                         border: active ? 'none' : `1px solid #E5E7EB`
                       }}
                     >
-                      <div className="font-semibold">{g.name}</div>
+                      <div className="flex items-center justify-between">
+                        <div className="font-semibold">{g.name}</div>
+                        {isFull && (
+                          <span
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                            style={{backgroundColor: active ? '#FECACA' : '#FEE2E2', color: '#991B1B'}}
+                          >
+                            Full
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs" style={{color: active ? '#FEE2E2' : '#6B7280'}}>
+                        <span style={{color: active ? tone.text : tone.text}}>Members: {memberCount}/{maxTeamMembers}</span>
+                      </div>
                     </button>
                   );
                 })}
@@ -534,6 +681,12 @@ export default function Group_page() {
                 <div className="rounded p-6" style={{backgroundColor: '#FEE2E2', borderLeft: '4px solid #831717'}}>
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">{activeGroup.name}</h2>
                   <p className="text-gray-700">Track and manage group submissions</p>
+                  <p
+                    className="text-sm mt-1"
+                    style={{color: getMemberTone(activeGroup.memberCount ?? 0).text}}
+                  >
+                    Members: {activeGroup.memberCount ?? 0}/{maxTeamMembers}
+                  </p>
                   {error && (
                     <div className="mt-4 p-3 rounded text-red-700 text-sm" style={{backgroundColor: '#FECACA', borderLeft: '4px solid #831717'}}>
                       {error}
@@ -610,22 +763,22 @@ export default function Group_page() {
                 )}
 
                 {/* Upload Section */}
-                <div className="bg-white rounded border-2" style={{borderColor: '#E5E7EB', borderStyle: (currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) ? 'dashed' : 'solid'}}>
+                <div className="bg-white rounded border-2" style={{borderColor: '#E5E7EB', borderStyle: (canUpload) ? 'dashed' : 'solid'}}>
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="font-bold text-gray-900">Upload Assignment</h3>
-                      {!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) && (
+                      {!canUpload && (
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                          {!currentUser.isApproved ? 'Pending Approval' : 'Not Your Team'}
+                          {!isAdminOwner && !isGroupMatch ? 'Not Your Team' : 'Pending Approval'}
                         </span>
                       )}
                     </div>
                     <p className="text-sm text-gray-600 mb-6">All file types accepted (max 50MB)</p>
 
-                    {!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) ? (
+                    {!canUpload ? (
                       <div className="p-4 rounded border-l-4" style={{backgroundColor: '#FEF3C7', borderColor: '#F59E0B'}}>
                         <p className="text-sm text-yellow-800 font-medium">
-                          {!currentUser.isApproved 
+                          {!isAdminOwner && isMember && !currentUser.isApproved 
                             ? "Your account is pending approval from your team leader. You'll be able to upload files once approved."
                             : "You can only upload files to your own team. Switch to your team to upload."}
                         </p>
@@ -700,28 +853,27 @@ export default function Group_page() {
                                 <div className="flex items-center justify-center gap-2">
                                   <button
                                     onClick={() => handleView(r.id)}
-                                    disabled={!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId))}
+                                    disabled={!canViewDownload}
                                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                                     style={{
-                                      color: (!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId))) ? '#9CA3AF' : '#831717', 
-                                      border: `1px solid ${(!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId))) ? '#D1D5DB' : '#831717'}`
+                                      color: (!canViewDownload) ? '#9CA3AF' : '#831717', 
+                                      border: `1px solid ${(!canViewDownload) ? '#D1D5DB' : '#831717'}`
                                     }}
                                     onMouseOver={(e) => {
-                                      if (currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) {
+                                      if (canViewDownload) {
                                         e.currentTarget.style.backgroundColor = '#831717';
                                         e.currentTarget.style.color = 'white';
                                       }
                                     }}
                                     onMouseOut={(e) => {
-                                      if (currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) {
+                                      if (canViewDownload) {
                                         e.currentTarget.style.backgroundColor = 'transparent';
                                         e.currentTarget.style.color = '#831717';
                                       }
                                     }}
                                     title={
-                                      (currentUser.role === 'admin' || currentUser.role === 'owner') ? "View file" :
-                                      !currentUser.isApproved ? "Pending approval - access restricted" :
-                                      currentUser.groupId !== activeId ? "You can only view files in your own team" :
+                                      (isAdminOwner) ? "View file" :
+                                      !isGroupMatch ? "You can only view files in your own team" :
                                       "View file"
                                     }
                                   >
@@ -730,34 +882,77 @@ export default function Group_page() {
                                   </button>
                                   <button
                                     onClick={() => handleDownload(r.id, r.title)}
-                                    disabled={!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId))}
+                                    disabled={!canViewDownload}
                                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                                     style={{
-                                      color: (!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId))) ? '#9CA3AF' : '#831717',
-                                      border: `1px solid ${(!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId))) ? '#D1D5DB' : '#831717'}`
+                                      color: (!canViewDownload) ? '#9CA3AF' : '#831717',
+                                      border: `1px solid ${(!canViewDownload) ? '#D1D5DB' : '#831717'}`
                                     }}
                                     onMouseOver={(e) => {
-                                      if (currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) {
+                                      if (canViewDownload) {
                                         e.currentTarget.style.backgroundColor = '#831717';
                                         e.currentTarget.style.color = 'white';
                                       }
                                     }}
                                     onMouseOut={(e) => {
-                                      if (currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) {
+                                      if (canViewDownload) {
                                         e.currentTarget.style.backgroundColor = 'transparent';
                                         e.currentTarget.style.color = '#831717';
                                       }
                                     }}
                                     title={
-                                      (currentUser.role === 'admin' || currentUser.role === 'owner') ? "Download file" :
-                                      !currentUser.isApproved ? "Pending approval - access restricted" :
-                                      currentUser.groupId !== activeId ? "You can only download files from your own team" :
+                                      (isAdminOwner) ? "Download file" :
+                                      !isGroupMatch ? "You can only download files from your own team" :
                                       "Download file"
                                     }
                                   >
                                     <FiDownload size={14} />
                                     Download
                                   </button>
+                                  {canEdit && (
+                                    <button
+                                      onClick={() => handleEditClick(r)}
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-semibold transition"
+                                      style={{
+                                        color: '#0F766E',
+                                        border: '1px solid #0F766E'
+                                      }}
+                                      onMouseOver={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#0F766E';
+                                        e.currentTarget.style.color = 'white';
+                                      }}
+                                      onMouseOut={(e) => {
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                        e.currentTarget.style.color = '#0F766E';
+                                      }}
+                                      title="Edit title"
+                                    >
+                                      <FiEdit2 size={14} />
+                                      Edit
+                                    </button>
+                                  )}
+                                  {canDelete && (
+                                    <button
+                                      onClick={() => handleDelete(r.id)}
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-semibold transition"
+                                      style={{
+                                        color: '#DC2626',
+                                        border: '1px solid #DC2626'
+                                      }}
+                                      onMouseOver={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#DC2626';
+                                        e.currentTarget.style.color = 'white';
+                                      }}
+                                      onMouseOut={(e) => {
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                        e.currentTarget.style.color = '#DC2626';
+                                      }}
+                                      title="Delete submission"
+                                    >
+                                      <FiTrash2 size={14} />
+                                      Delete
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -774,6 +969,83 @@ export default function Group_page() {
                   </div>
                   <div className="px-4 py-2 border-t text-sm font-semibold text-gray-700" style={{borderColor: '#E5E7EB'}}>
                     Total: {rows.length}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showEditModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3">Edit Submission</h3>
+                  <p className="text-sm text-gray-600 mb-4">Update the submission title.</p>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-1.5">Title</label>
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="w-full px-3.5 py-2 border-2 rounded text-gray-900 placeholder-gray-400 focus:outline-none transition"
+                        style={{borderColor: '#E5E7EB'}}
+                        onFocus={(e) => e.target.style.borderColor = '#831717'}
+                        onBlur={(e) => e.target.style.borderColor = '#E5E7EB'}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-1.5">Replace file (optional)</label>
+                      <label className="flex items-center gap-3 w-full">
+                        <input
+                          type="file"
+                          onChange={(e) => setEditFile(e.target.files?.[0] || null)}
+                          className="hidden"
+                        />
+                        <span
+                          className="flex-1 px-3.5 py-2 rounded border-2 text-sm font-semibold cursor-pointer transition"
+                          style={{borderColor: '#E5E7EB', color: '#831717'}}
+                          onMouseOver={(e) => e.target.style.backgroundColor = '#FEE2E2'}
+                          onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                        >
+                          {editFile ? `✓ ${editFile.name}` : 'Choose file'}
+                        </span>
+                        {editFile && (
+                          <button
+                            type="button"
+                            onClick={() => setEditFile(null)}
+                            className="px-3 py-2 text-xs font-semibold rounded border transition"
+                            style={{borderColor: '#E5E7EB', color: '#6B7280'}}
+                            onMouseOver={(e) => e.target.style.backgroundColor = '#F3F4F6'}
+                            onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </label>
+                    </div>
+                    <div className="flex gap-3 justify-end">
+                      <button
+                        onClick={() => {
+                          setShowEditModal(false);
+                          setEditingSubmission(null);
+                          setEditFile(null);
+                        }}
+                        className="px-4 py-2 border-2 rounded font-semibold transition"
+                        style={{borderColor: '#E5E7EB', color: '#374151'}}
+                        onMouseOver={(e) => e.target.style.backgroundColor = '#F3F4F6'}
+                        onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleEditSave}
+                        className="px-4 py-2 rounded font-semibold text-white transition"
+                        style={{backgroundColor: '#831717'}}
+                        onMouseOver={(e) => e.target.style.backgroundColor = '#6B1214'}
+                        onMouseOut={(e) => e.target.style.backgroundColor = '#831717'}
+                      >
+                        Save
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

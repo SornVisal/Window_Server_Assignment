@@ -29,11 +29,13 @@ import { SubmissionsService } from './submissions.service';
 import { UploadSubmissionDto } from './dto/upload-submission.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from '../users/users.service';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 
 const uploadsRoot = join(__dirname, '..', '..', 'uploads');
 
 @Controller('submissions')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class SubmissionsController {
   constructor(
     private readonly submissionsService: SubmissionsService,
@@ -41,6 +43,7 @@ export class SubmissionsController {
   ) {}
 
   @Post('upload')
+  @Roles('member', 'leader', 'admin')
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -68,11 +71,11 @@ export class SubmissionsController {
       throw new NotFoundException('User not found');
     }
     
-    if (user.role !== 'owner' && user.role !== 'admin' && !user.isApproved) {
+    if (user.role === 'member' && !user.isApproved) {
       throw new ForbiddenException('Your account must be approved by your team leader before uploading files');
     }
 
-    if (user.role !== 'owner' && user.role !== 'admin') {
+    if (user.role === 'member' || user.role === 'leader') {
       if (!user.groupId) {
         throw new ForbiddenException('No group assigned');
       }
@@ -101,18 +104,36 @@ export class SubmissionsController {
   }
 
   @Get()
+  @Roles('admin')
   findAll() {
     return this.submissionsService.findAll();
   }
 
   @Get(':id/view')
+  @Roles('member', 'leader', 'admin')
   async view(
     @Param('id', ParseUUIDPipe) id: string,
     @Res({ passthrough: true }) res: Response,
+    @Req() req: any,
   ): Promise<StreamableFile> {
     const submission = await this.submissionsService.findOne(id);
     if (!submission) {
       throw new NotFoundException('Submission not found');
+    }
+
+    const user = await this.usersService.findOne(req.user.id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isElevated = user.role === 'owner' || user.role === 'admin';
+    if (!isElevated) {
+      if (user.role !== 'member' && user.role !== 'leader') {
+        throw new ForbiddenException('You are not allowed to view submissions');
+      }
+      if (!user.groupId || submission.groupId !== user.groupId) {
+        throw new ForbiddenException('You can only view submissions from your group');
+      }
     }
 
     if (!submission.fileUrl) {
@@ -210,13 +231,30 @@ export class SubmissionsController {
   }
 
   @Get(':id/download')
+  @Roles('member', 'leader', 'admin')
   async download(
     @Param('id', ParseUUIDPipe) id: string,
     @Res({ passthrough: true }) res: Response,
+    @Req() req: any,
   ): Promise<StreamableFile> {
     const submission = await this.submissionsService.findOne(id);
     if (!submission) {
       throw new NotFoundException('Submission not found');
+    }
+
+    const user = await this.usersService.findOne(req.user.id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isElevated = user.role === 'owner' || user.role === 'admin';
+    if (!isElevated) {
+      if (user.role !== 'member' && user.role !== 'leader') {
+        throw new ForbiddenException('You are not allowed to download submissions');
+      }
+      if (!user.groupId || submission.groupId !== user.groupId) {
+        throw new ForbiddenException('You can only download submissions from your group');
+      }
     }
 
     if (!submission.fileUrl) {
@@ -247,8 +285,83 @@ export class SubmissionsController {
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+  @Roles('member', 'leader', 'admin')
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+  ) {
     const submission = await this.submissionsService.findOne(id);
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    const user = await this.usersService.findOne(req.user.id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isElevated = user.role === 'owner' || user.role === 'admin';
+    if (!isElevated) {
+      if (user.role !== 'member' && user.role !== 'leader') {
+        throw new ForbiddenException('You are not allowed to view submissions');
+      }
+      if (!user.groupId || submission.groupId !== user.groupId) {
+        throw new ForbiddenException('You can only view submissions from your group');
+      }
+    }
+    return submission;
+  }
+
+  @Post(':id/upload')
+  @Roles('leader', 'admin')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: uploadsRoot,
+        filename: (_req, file, cb) => {
+          const safeExt = extname(file.originalname) || '';
+          cb(null, `${randomUUID()}${safeExt}`);
+        },
+      }),
+      limits: { fileSize: 50 * 1024 * 1024 },
+    }),
+  )
+  async replaceFile(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('title') title: string | undefined,
+    @Req() req: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+
+    const existing = await this.submissionsService.findOne(id);
+    if (!existing) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    const user = await this.usersService.findOne(req.user.id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isElevated = user.role === 'owner' || user.role === 'admin';
+    if (!isElevated) {
+      if (user.role !== 'leader') {
+        throw new ForbiddenException('You are not allowed to edit submissions');
+      }
+      if (!user.groupId || existing.groupId !== user.groupId) {
+        throw new ForbiddenException('You can only edit submissions from your group');
+      }
+    }
+
+    const submission = await this.submissionsService.update(id, {
+      fileUrl: `/uploads/${file.filename}`,
+      title: title?.trim() || undefined,
+      submittedAt: new Date().toISOString(),
+    });
+
     if (!submission) {
       throw new NotFoundException('Submission not found');
     }
@@ -256,10 +369,38 @@ export class SubmissionsController {
   }
 
   @Patch(':id')
+  @Roles('leader', 'admin')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateSubmissionDto,
+    @Req() req: any,
   ) {
+    const existing = await this.submissionsService.findOne(id);
+    if (!existing) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    const user = await this.usersService.findOne(req.user.id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isElevated = user.role === 'owner' || user.role === 'admin';
+    if (!isElevated) {
+      if (user.role !== 'leader') {
+        throw new ForbiddenException('You are not allowed to edit submissions');
+      }
+      if (!user.groupId || existing.groupId !== user.groupId) {
+        throw new ForbiddenException('You can only edit submissions from your group');
+      }
+      if (dto.groupId && dto.groupId !== existing.groupId) {
+        throw new ForbiddenException('You cannot change the submission group');
+      }
+      if (dto.uploadedBy && dto.uploadedBy !== existing.uploadedBy) {
+        throw new ForbiddenException('You cannot change the submission uploader');
+      }
+    }
+
     const submission = await this.submissionsService.update(id, dto);
     if (!submission) {
       throw new NotFoundException('Submission not found');
@@ -268,7 +409,20 @@ export class SubmissionsController {
   }
 
   @Delete(':id')
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
+  @Roles('leader', 'admin')
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+  ) {
+    const user = await this.usersService.findOne(req.user.id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role !== 'owner' && user.role !== 'admin' && user.role !== 'leader') {
+      throw new ForbiddenException('You are not allowed to delete submissions');
+    }
+
     const submission = await this.submissionsService.remove(id);
     if (!submission) {
       throw new NotFoundException('Submission not found');

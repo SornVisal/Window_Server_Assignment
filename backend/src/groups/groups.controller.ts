@@ -9,18 +9,24 @@ import {
   Patch,
   Post,
   UseGuards,
+  Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupsService } from './groups.service';
 import { SubmissionsService } from '../submissions/submissions.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { UsersService } from '../users/users.service';
 
 @Controller('groups')
 export class GroupsController {
   constructor(
     private readonly groupsService: GroupsService,
     private readonly submissionsService: SubmissionsService,
+    private readonly usersService: UsersService,
   ) {}
 
   @Post()
@@ -45,8 +51,26 @@ export class GroupsController {
   }
 
   @Get(':id/submissions')
-  @UseGuards(JwtAuthGuard)
-  async findSubmissions(@Param('id', ParseUUIDPipe) id: string) {
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('member', 'leader', 'admin')
+  async findSubmissions(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+  ) {
+    const user = await this.usersService.findOne(req.user.id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isElevated = user.role === 'owner' || user.role === 'admin';
+    if (!isElevated) {
+      if (user.role !== 'member' && user.role !== 'leader') {
+        throw new ForbiddenException('You are not allowed to view submissions');
+      }
+      if (!user.groupId || user.groupId !== id) {
+        throw new ForbiddenException('You can only view submissions from your group');
+      }
+    }
     return this.submissionsService.findByGroupId(id);
   }
 

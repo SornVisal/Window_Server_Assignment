@@ -11,6 +11,17 @@ export default function AdminDashboard() {
   const [currentUserRole, setCurrentUserRole] = useState('');
   const [currentUserId, setCurrentUserId] = useState('');
   const [leaderTeamSelections, setLeaderTeamSelections] = useState({});
+  const maxTeamMembers = 10;
+
+  const getMemberTone = (count) => {
+    if (count >= maxTeamMembers) {
+      return { text: '#991B1B', bg: '#FEE2E2' };
+    }
+    if (count >= maxTeamMembers - 2) {
+      return { text: '#B45309', bg: '#FEF3C7' };
+    }
+    return { text: '#6B7280', bg: 'transparent' };
+  };
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('currentUser'));
@@ -80,6 +91,9 @@ export default function AdminDashboard() {
 
       if (!response.ok) {
         const errorMessage = await readErrorMessage(response, 'Failed to update role');
+        if (errorMessage.includes('Team is full')) {
+          throw new Error('Team is full (max 10 members). Choose another team.');
+        }
         throw new Error(errorMessage);
       }
 
@@ -94,6 +108,17 @@ export default function AdminDashboard() {
   const getGroupName = (groupId) => {
     const group = groups.find(g => g.id === groupId);
     return group ? group.name : 'No Team';
+  };
+
+  const getGroupMemberLabel = (groupId) => {
+    const group = groups.find(g => g.id === groupId);
+    if (!group) {
+      return null;
+    }
+    return {
+      label: `Members: ${group.memberCount ?? 0}/${maxTeamMembers}`,
+      tone: getMemberTone(group.memberCount ?? 0),
+    };
   };
 
   const getLeaderTargetGroupId = (user) => {
@@ -212,6 +237,17 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{getGroupName(user.groupId)}</div>
+                      {(() => {
+                        const info = getGroupMemberLabel(user.groupId);
+                        if (!info) {
+                          return null;
+                        }
+                        return (
+                          <div className="text-xs" style={{color: info.tone.text}}>
+                            {info.label}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {user.isApproved ? (
@@ -254,7 +290,8 @@ export default function AdminDashboard() {
                               <option value="">Select team</option>
                               {groups.map((group) => (
                                 <option key={group.id} value={group.id}>
-                                  {group.name}
+                                  {group.name} ({group.memberCount ?? 0}/{maxTeamMembers})
+                                  {(group.memberCount ?? 0) >= maxTeamMembers ? ' - Full' : ''}
                                 </option>
                               ))}
                             </select>

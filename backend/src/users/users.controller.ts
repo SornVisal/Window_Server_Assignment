@@ -105,9 +105,9 @@ export class UsersController {
       }
     }
 
-    // Check team capacity if assigning to a new team (max 10 approved members per team)
+    // Check team capacity if assigning to a new team (max 10 members per team)
     if (dto.groupId && dto.groupId !== targetUser?.groupId) {
-      const currentMemberCount = await this.usersService.countApprovedMembersByGroup(dto.groupId);
+      const currentMemberCount = await this.usersService.countMembersByGroup(dto.groupId);
       if (currentMemberCount >= 10) {
         throw new ForbiddenException('Team is full. Maximum 10 members allowed per team.');
       }
@@ -141,7 +141,7 @@ export class UsersController {
     }
 
     // Check team member capacity (max 10 members)
-    const currentMemberCount = await this.usersService.countApprovedMembersByGroup(userToApprove.groupId);
+    const currentMemberCount = await this.usersService.countMembersByGroup(userToApprove.groupId);
     if (currentMemberCount >= 10) {
       throw new ForbiddenException('Team is full. Maximum 10 members allowed per team.');
     }
@@ -186,6 +186,13 @@ export class UsersController {
     const user = await this.usersService.findOne(id);
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    if (groupId && groupId !== user.groupId) {
+      const currentMemberCount = await this.usersService.countMembersByGroup(groupId);
+      if (currentMemberCount >= 10) {
+        throw new ForbiddenException('Team is full. Maximum 10 members allowed per team.');
+      }
     }
 
     // When changing teams, reset approval status
