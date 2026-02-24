@@ -53,13 +53,8 @@ export default function Login() {
           throw new Error(`❌ ${errorMessage}`);
         }
       }
-      if (isRegister && !data.user.isApproved) {
-        setError('✅ Registration successful! Please sign in and wait for your team leader to approve your account.');
-        setIsRegister(false);
-        setIsLoading(false);
-        return;
-      }
 
+      // Store credentials and auto-login
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('currentUser', JSON.stringify(data.user));
       sessionManager.setLoginSession();
