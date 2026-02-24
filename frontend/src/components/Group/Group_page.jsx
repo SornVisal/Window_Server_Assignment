@@ -70,6 +70,7 @@ export default function Group_page() {
   const canViewDownload = isAdminOwner || ((isLeader || isMember) && isGroupMatch);
   const canEdit = isAdminOwner || (isLeader && isGroupMatch);
   const canDelete = isAdminOwner || (isLeader && isGroupMatch);
+  const isOverlayOpen = showEditModal || showDeleteModal || showTeamModal;
 
   // Filter groups based on user role
   const visibleGroups = useMemo(() => {
@@ -503,15 +504,19 @@ export default function Group_page() {
 
   return (
     <div className="h-screen bg-white flex flex-col overflow-hidden">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-white" style={{borderColor: '#831717'}}>
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img 
-              src="https://smis.cs.fs.rupp.edu.kh/rupp_logo.png" 
-              alt="RUPP Logo" 
-              className="h-10 w-10 object-contain"
-            />
+      <div
+        className={isOverlayOpen ? 'pointer-events-none' : ''}
+        style={{filter: isOverlayOpen ? 'blur(3px)' : 'none'}}
+      >
+        {/* Header */}
+        <header className="sticky top-0 z-50 border-b bg-white" style={{borderColor: '#831717'}}>
+          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img 
+                src="https://smis.cs.fs.rupp.edu.kh/rupp_logo.png" 
+                alt="RUPP Logo" 
+                className="h-10 w-10 object-contain"
+              />
             <div>
               <h1 className="text-base font-bold text-gray-900">Royal University of Phnom Penh</h1>
               <p className="text-xs text-gray-600">Group Submission System</p>
@@ -1027,8 +1032,11 @@ export default function Group_page() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      </div>
 
-            {showEditModal && (
+      {showEditModal && (
               <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50">
                 <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
                   <h3 className="text-lg font-bold text-gray-900 mb-3">Edit Submission</h3>
