@@ -3,47 +3,84 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from 'react';
 import Group_page from './components/Group/Group_page'
 import AdminDashboard from './components/AdminDashboard'
+import ProtectedRoute from './components/ProtectedRoute'
 import { sessionManager } from './utils/sessionManager'
 
 function App() {
-  const [isSessionValid, setIsSessionValid] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
 
   useEffect(() => {
-    // Check session validity on app load
-    const token = localStorage.getItem('accessToken');
-    const currentUser = localStorage.getItem('currentUser');
+    // Check authentication status
+    const checkAuth = () => {
+      const token = localStorage.getItem('accessToken');
+      const currentUser = localStorage.getItem('currentUser');
 
-    // If no token or user data, session is invalid
-    if (!token || !currentUser) {
-      setIsSessionValid(false);
-      return;
-    }
+      if (!token || !currentUser) {
+        setIsAuthenticated(false);
+        return;
+      }
 
-    // Check if session is still within 5 minute window
-    if (sessionManager.isSessionValid()) {
-      setIsSessionValid(true);
-    } else {
-      // Session expired - clear and redirect to login
-      sessionManager.clearSession();
-      setIsSessionValid(false);
-    }
+      if (sessionManager.isSessionValid()) {
+        setIsAuthenticated(true);
+      } else {
+        sessionManager.clearSession();
+        setIsAuthenticated(false);
+      }
+    };
+
+    checkAuth();
+
+    // Check session every 30 seconds
+    const interval = setInterval(checkAuth, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  // Show nothing while checking session
-  if (isSessionValid === null) {
-    return <div></div>;
+  // Show loading while checking authentication
+  if (isAuthenticated === null) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path='/group' element={isSessionValid ? <Group_page /> : <Navigate to="/" />} />
-        <Route path='/admin' element={isSessionValid ? <AdminDashboard /> : <Navigate to="/" />} />
+        {/* Login route - redirect to /group if already authenticated */}
+        <Route 
+          path="/" 
+          element={isAuthenticated ? <Navigate to="/group" replace /> : <Login />} 
+        />
+        
+        {/* Protected routes - require authentication */}
+        <Route 
+          path='/group' 
+          element={
+            <ProtectedRoute>
+              <Group_page />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Admin route - require authentication + admin/owner role */}
+        <Route 
+          path='/admin' 
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'owner']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Catch all other routes - redirect to login */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
-    </>
   )
 }
 
