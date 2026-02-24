@@ -25,6 +25,8 @@ export default function Group_page() {
   const [editingSubmission, setEditingSubmission] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editFile, setEditFile] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const token = localStorage.getItem('accessToken');
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
   const maxFileSizeBytes = 50 * 1024 * 1024;
@@ -272,14 +274,18 @@ export default function Group_page() {
       setError('Please sign in first.');
       return;
     }
-    const confirmed = window.confirm('Delete this submission? This action cannot be undone.');
-    if (!confirmed) {
+    setDeleteTarget(submissionId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) {
       return;
     }
     setError('');
-    setDeleteLoadingId(submissionId);
+    setDeleteLoadingId(deleteTarget);
     try {
-      const response = await fetch(`/api/submissions/${submissionId}`, {
+      const response = await fetch(`/api/submissions/${deleteTarget}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -287,8 +293,10 @@ export default function Group_page() {
         const errorMessage = await readErrorMessage(response, 'Delete failed');
         throw new Error(errorMessage);
       }
-      setSubmissions((prev) => prev.filter((item) => item.id !== submissionId));
+      setSubmissions((prev) => prev.filter((item) => item.id !== deleteTarget));
       await loadSubmissions();
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed');
     } finally {
@@ -1021,7 +1029,7 @@ export default function Group_page() {
             )}
 
             {showEditModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="fixed inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50">
                 <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
                   <h3 className="text-lg font-bold text-gray-900 mb-3">Edit Submission</h3>
                   <p className="text-sm text-gray-600 mb-4">Update the submission title.</p>
@@ -1101,6 +1109,47 @@ export default function Group_page() {
                         )}
                       </button>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showDeleteModal && (
+              <div className="fixed inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Submission</h3>
+                  <p className="text-sm text-gray-600 mb-5">This action cannot be undone.</p>
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={() => {
+                        setShowDeleteModal(false);
+                        setDeleteTarget(null);
+                      }}
+                      disabled={deleteLoadingId !== ''}
+                      className="px-4 py-2 border-2 rounded font-semibold transition"
+                      style={{borderColor: '#E5E7EB', color: '#374151'}}
+                      onMouseOver={(e) => e.target.style.backgroundColor = '#F3F4F6'}
+                      onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmDelete}
+                      disabled={deleteLoadingId !== ''}
+                      className="px-4 py-2 rounded font-semibold text-white transition disabled:opacity-60 disabled:cursor-not-allowed"
+                      style={{backgroundColor: '#DC2626'}}
+                      onMouseOver={(e) => e.target.style.backgroundColor = '#B91C1C'}
+                      onMouseOut={(e) => e.target.style.backgroundColor = '#DC2626'}
+                    >
+                      {deleteLoadingId !== '' ? (
+                        <span className="inline-flex items-center gap-2">
+                          <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                          Deleting...
+                        </span>
+                      ) : (
+                        'Delete'
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
