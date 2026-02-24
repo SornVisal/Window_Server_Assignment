@@ -50,9 +50,17 @@ Example: Attacker tries 1000 passwords in 5 seconds → Blocked after 5 attempts
 - **Impact**: DoS vulnerability
 - **Fix**: 30-second timeout on all requests
 
-### 6. **No Account Lockout** ⚠️
-- **Status**: Rate limiting provides partial protection
-- **Future Enhancement**: Implement account lockout after 3 failed attempts
+### 6. **Weak Password Policy** ✅
+- **Issue**: No password strength requirements
+- **Impact**: Users could set weak passwords like "abc123"
+- **Fix**: Enforce strong password requirements on registration
+  - Minimum 12 characters
+  - At least one uppercase letter (A-Z)
+  - At least one lowercase letter (a-z)
+  - At least one number (0-9)
+  - At least one special character (!@#$%^&* etc)
+  - Real-time validation on frontend with visual indicators
+  - Backend validation with specific error messages
 
 ## 🛡️ Security Features Implemented
 
@@ -65,6 +73,7 @@ Example: Attacker tries 1000 passwords in 5 seconds → Blocked after 5 attempts
 | **Request Timeout** | ✅ | 30-second limit |
 | **Route Protection** | ✅ | Token + role validation |
 | **Password Hashing** | ✅ | bcrypt with salt=10 |
+| **Password Strength** | ✅ | 12+ chars, uppercase, lowercase, number, special |
 | **JWT Validation** | ✅ | 5-minute expiration |
 | **SQL Injection** | ✅ | Parameterized queries |
 
@@ -185,6 +194,7 @@ If you suspect a security breach:
 - [x] Helmet.js installed
 - [x] Generic error messages
 - [x] Password hashing (bcrypt)
+- [x] Password strength enforced (12+ chars, uppercase, lowercase, number, special)
 - [x] JWT validation
 - [x] Route protection
 - [x] Request timeout

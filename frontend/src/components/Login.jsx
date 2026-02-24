@@ -3,6 +3,22 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { sessionManager } from '../utils/sessionManager';
 
+// Password strength validation
+const validatePassword = (pwd) => {
+  return {
+    minLength: pwd.length >= 12,
+    hasUppercase: /[A-Z]/.test(pwd),
+    hasLowercase: /[a-z]/.test(pwd),
+    hasNumber: /[0-9]/.test(pwd),
+    hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd),
+  };
+};
+
+const isPasswordValid = (pwd) => {
+  const checks = validatePassword(pwd);
+  return Object.values(checks).every(check => check === true);
+};
+
 export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -13,10 +29,24 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [passwordChecks, setPasswordChecks] = useState(null);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+    
+    // Validate password strength on registration
+    if (isRegister) {
+      if (!isPasswordValid(password)) {
+        setError('❌ Password does not meet all requirements. Please check the requirements below.');
+        return;
+      }
+      if (!name.trim()) {
+        setError('❌ Please enter your full name.');
+        return;
+      }
+    }
+    
     setIsLoading(true);
     try {
       const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
@@ -64,6 +94,14 @@ export default function Login() {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePasswordChange = (e) => {
+    const pwd = e.target.value;
+    setPassword(pwd);
+    if (isRegister) {
+      setPasswordChecks(validatePassword(pwd));
     }
   };
 
@@ -150,7 +188,7 @@ export default function Login() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={handlePasswordChange}
                   placeholder="Enter your password"
                   className="w-full px-3.5 py-2 border-2 rounded text-gray-900 placeholder-gray-400 focus:outline-none transition bg-white"
                   style={{borderColor: '#E5E7EB'}}
@@ -166,6 +204,20 @@ export default function Login() {
                   {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
                 </button>
               </div>
+              
+              {/* Password Requirements Checker (only show on register) */}
+              {isRegister && password.length > 0 && passwordChecks && (
+                <div className="mt-3 p-2.5 rounded text-xs" style={{backgroundColor: '#F5F5F5', border: '1px solid #D1D5DB'}}>
+                  <p style={{color: '#6B7280', marginBottom: '0.5rem'}}><strong>Password must contain:</strong></p>
+                  <ul style={{color: '#6B7280', lineHeight: '1.4'}}>
+                    <li>{passwordChecks.minLength ? '✅' : '❌'} At least 12 characters (current: {password.length})</li>
+                    <li>{passwordChecks.hasUppercase ? '✅' : '❌'} At least one uppercase letter (A-Z)</li>
+                    <li>{passwordChecks.hasLowercase ? '✅' : '❌'} At least one lowercase letter (a-z)</li>
+                    <li>{passwordChecks.hasNumber ? '✅' : '❌'} At least one number (0-9)</li>
+                    <li>{passwordChecks.hasSpecial ? '✅' : '❌'} At least one special character (!@#$%^&* etc)</li>
+                  </ul>
+                </div>
+              )}
             </div>
 
             {!isRegister && (
@@ -196,11 +248,12 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || (isRegister && !isPasswordValid(password))}
               className="w-full mt-6 px-4 py-2 rounded font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
               style={{backgroundColor: '#831717'}}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#6B1214'}
+              onMouseOver={(e) => !isLoading && !(isRegister && !isPasswordValid(password)) && (e.target.style.backgroundColor = '#6B1214')}
               onMouseOut={(e) => e.target.style.backgroundColor = '#831717'}
+              title={isRegister && !isPasswordValid(password) ? 'Password does not meet all requirements' : ''}
             >
               {isLoading ? 'Signing in...' : isRegister ? 'Create Account' : 'Sign in'}
             </button>
@@ -231,6 +284,9 @@ export default function Login() {
                 onClick={() => {
                   setIsRegister(!isRegister);
                   setError('');
+                  setPassword('');
+                  setPasswordChecks(null);
+                  setName('');
                 }}
                 className="font-semibold hover:opacity-80"
                 style={{color: '#831717'}}
