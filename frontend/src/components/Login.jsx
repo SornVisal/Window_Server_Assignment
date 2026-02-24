@@ -98,9 +98,17 @@ export default function Login() {
           </div>
 
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Sign In</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{isRegister ? 'Create Account' : 'Sign In'}</h1>
             <p className="text-gray-600">Group Submission Management System</p>
           </div>
+
+          {isRegister && (
+            <div className="mb-6 p-3 rounded text-xs" style={{backgroundColor: '#FEF3C7', border: '1px solid #FCD34D'}}>
+              <p style={{color: '#92400E', lineHeight: '1.5'}}>
+                <strong>📋 Registration Process:</strong> After creating your account, you'll be automatically logged in. Your account is pending approval from your team leader before you can upload files.
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {isRegister && (
@@ -196,6 +204,13 @@ export default function Login() {
             >
               {isLoading ? 'Signing in...' : isRegister ? 'Create Account' : 'Sign in'}
             </button>
+
+            {/* Security Notice */}
+            <div className="mt-4 p-3 rounded text-xs" style={{backgroundColor: '#F0F9FF', border: '1px solid #BFDBFE'}}>
+              <p style={{color: '#1E40AF', lineHeight: '1.5'}}>
+                <strong>🔒 Account Security:</strong> For your protection, you can only attempt to sign in 5 times within 15 minutes. After 5 failed attempts, please wait 15 minutes before trying again.
+              </p>
+            </div>
           </form>
 
           {/* Links */}
@@ -226,7 +241,18 @@ export default function Login() {
           </div>
 
           {/* Footer */}
-          <div className="mt-8 pt-6 border-t text-center text-xs text-gray-500" style={{borderColor: '#E5E7EB'}}>
+          <div className="mt-8 pt-6 border-t space-y-4 text-center text-xs text-gray-500" style={{borderColor: '#E5E7EB'}}>
+            <div className="p-3 rounded" style={{backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB'}}>
+              <p style={{color: '#4B5563', lineHeight: '1.5'}}>
+                <strong>🔐 Security Tips:</strong>
+              </p>
+              <ul style={{color: '#6B7280', lineHeight: '1.6', marginTop: '0.5rem', textAlign: 'left', fontSize: '0.75rem'}}>
+                <li>✓ Use strong passwords (12+ characters, mixed case, numbers, symbols)</li>
+                <li>✓ Never share your login credentials</li>
+                <li>✓ Clear browser cache if using public computers</li>
+                <li>✓ Automatically logged out after 5 minutes of inactivity</li>
+              </ul>
+            </div>>
             <p>© 2026 Royal University of Phnom Penh</p>
           </div>
         </div>
