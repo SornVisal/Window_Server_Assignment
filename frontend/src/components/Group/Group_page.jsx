@@ -86,17 +86,25 @@ export default function Group_page() {
 
   // Prevent body scroll when modal is open
   useEffect(() => {
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    
     if (isOverlayOpen) {
       document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
+      // Reserve space for scrollbar to prevent layout shift
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = scrollbarWidth + 'px';
+      }
     } else {
-      document.documentElement.style.overflow = 'auto';
-      document.body.style.overflow = 'auto';
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
     }
     
     return () => {
-      document.documentElement.style.overflow = 'auto';
-      document.body.style.overflow = 'auto';
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
     };
   }, [isOverlayOpen]);
 
@@ -519,7 +527,7 @@ export default function Group_page() {
   }
 
   return (
-    <div className="h-screen bg-white flex flex-col overflow-hidden">
+    <div className="h-screen bg-white flex flex-col">
       <div
         className={isOverlayOpen ? 'pointer-events-none' : ''}
         style={{filter: isOverlayOpen ? 'blur(3px)' : 'none'}}
