@@ -87,13 +87,16 @@ export default function Group_page() {
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOverlayOpen) {
+      document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'auto';
+      document.body.style.overflow = 'auto';
     }
     
     return () => {
-      document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'auto';
+      document.body.style.overflow = 'auto';
     };
   }, [isOverlayOpen]);
 
@@ -1052,8 +1055,8 @@ export default function Group_page() {
 
     {/* Modals - outside blur wrapper */}
     {showEditModal && (
-      <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+      <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full max-h-screen overflow-y-auto">
           <h3 className="text-lg font-bold text-gray-900 mb-3">Edit Submission</h3>
           <p className="text-sm text-gray-600 mb-4">Update the submission title.</p>
           <div className="space-y-4">
@@ -1138,8 +1141,8 @@ export default function Group_page() {
     )}
 
     {showDeleteModal && (
-      <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+      <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full max-h-screen overflow-y-auto">
           <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Submission</h3>
           <p className="text-sm text-gray-600 mb-5">This action cannot be undone.</p>
           <div className="flex gap-3 justify-end">
