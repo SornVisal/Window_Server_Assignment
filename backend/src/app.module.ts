@@ -16,8 +16,7 @@ import { AuthModule } from './auth/auth.module';
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'frontend', 'dist'),
       serveRoot: '/',
-      renderPath: '*',
-      exclude: ['/api*', '/uploads*'],
+      exclude: ['/api/(.*)', '/uploads/(.*)'],
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
