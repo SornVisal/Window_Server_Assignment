@@ -43,17 +43,9 @@ export default function Group_page() {
 
   // Filter groups based on user role
   const visibleGroups = useMemo(() => {
-    // Admin and owner can see all teams
-    if (currentUser.role === 'admin' || currentUser.role === 'owner') {
-      return groups;
-    }
-    // Leaders and members can only see their own team
-    if (currentUser.groupId) {
-      return groups.filter(g => g.id === currentUser.groupId);
-    }
-    // Users without a team can see all teams (to choose one)
+    // Everyone can see all teams to browse submissions
     return groups;
-  }, [groups, currentUser.role, currentUser.groupId]);
+  }, [groups]);
 
   useEffect(() => {
     const fetchGroups = async () => {
@@ -72,15 +64,10 @@ export default function Group_page() {
         const data = await response.json();
         setGroups(data);
         
-        // Set active team based on user role
-        if (currentUser.role === 'admin' || currentUser.role === 'owner') {
-          // Admin/owner start with first team
-          setActiveId(data[0]?.id ?? '');
-        } else if (currentUser.groupId) {
-          // Leaders and members start with their own team
+        // Set active team - start with user's own team if they have one, otherwise first team
+        if (currentUser.groupId) {
           setActiveId(currentUser.groupId);
         } else {
-          // No team selected yet
           setActiveId(data[0]?.id ?? '');
         }
       } catch (err) {
@@ -589,22 +576,24 @@ export default function Group_page() {
                 )}
 
                 {/* Upload Section */}
-                <div className="bg-white rounded border-2" style={{borderColor: '#E5E7EB', borderStyle: currentUser.isApproved ? 'dashed' : 'solid'}}>
+                <div className="bg-white rounded border-2" style={{borderColor: '#E5E7EB', borderStyle: (currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) ? 'dashed' : 'solid'}}>
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="font-bold text-gray-900">Upload Assignment</h3>
-                      {!currentUser.isApproved && currentUser.role !== 'admin' && currentUser.role !== 'owner' && (
+                      {!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) && (
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                          Pending Approval
+                          {!currentUser.isApproved ? 'Pending Approval' : 'Not Your Team'}
                         </span>
                       )}
                     </div>
                     <p className="text-sm text-gray-600 mb-6">All file types accepted (max 50MB)</p>
 
-                    {!currentUser.isApproved && currentUser.role !== 'admin' && currentUser.role !== 'owner' ? (
+                    {!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) ? (
                       <div className="p-4 rounded border-l-4" style={{backgroundColor: '#FEF3C7', borderColor: '#F59E0B'}}>
                         <p className="text-sm text-yellow-800 font-medium">
-                          Your account is pending approval from your team leader. You'll be able to upload files once approved.
+                          {!currentUser.isApproved 
+                            ? "Your account is pending approval from your team leader. You'll be able to upload files once approved."
+                            : "You can only upload files to your own team. Switch to your team to upload."}
                         </p>
                       </div>
                     ) : (
@@ -677,34 +666,60 @@ export default function Group_page() {
                                 <div className="flex items-center justify-center gap-2">
                                   <button
                                     onClick={() => handleView(r.id)}
-                                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-semibold transition"
-                                    style={{color: '#831717', border: '1px solid #831717'}}
+                                    disabled={!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId))}
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{
+                                      color: (!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId))) ? '#9CA3AF' : '#831717', 
+                                      border: `1px solid ${(!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId))) ? '#D1D5DB' : '#831717'}`
+                                    }}
                                     onMouseOver={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#831717';
-                                      e.currentTarget.style.color = 'white';
+                                      if (currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) {
+                                        e.currentTarget.style.backgroundColor = '#831717';
+                                        e.currentTarget.style.color = 'white';
+                                      }
                                     }}
                                     onMouseOut={(e) => {
-                                      e.currentTarget.style.backgroundColor = 'transparent';
-                                      e.currentTarget.style.color = '#831717';
+                                      if (currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) {
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                        e.currentTarget.style.color = '#831717';
+                                      }
                                     }}
-                                    title="View file"
+                                    title={
+                                      (currentUser.role === 'admin' || currentUser.role === 'owner') ? "View file" :
+                                      !currentUser.isApproved ? "Pending approval - access restricted" :
+                                      currentUser.groupId !== activeId ? "You can only view files in your own team" :
+                                      "View file"
+                                    }
                                   >
                                     <FiEye size={14} />
                                     View
                                   </button>
                                   <button
                                     onClick={() => handleDownload(r.id, r.title)}
-                                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-semibold transition"
-                                    style={{color: '#831717', border: '1px solid #831717'}}
+                                    disabled={!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId))}
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{
+                                      color: (!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId))) ? '#9CA3AF' : '#831717',
+                                      border: `1px solid ${(!(currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId))) ? '#D1D5DB' : '#831717'}`
+                                    }}
                                     onMouseOver={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#831717';
-                                      e.currentTarget.style.color = 'white';
+                                      if (currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) {
+                                        e.currentTarget.style.backgroundColor = '#831717';
+                                        e.currentTarget.style.color = 'white';
+                                      }
                                     }}
                                     onMouseOut={(e) => {
-                                      e.currentTarget.style.backgroundColor = 'transparent';
-                                      e.currentTarget.style.color = '#831717';
+                                      if (currentUser.role === 'admin' || currentUser.role === 'owner' || (currentUser.isApproved && currentUser.groupId === activeId)) {
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                        e.currentTarget.style.color = '#831717';
+                                      }
                                     }}
-                                    title="Download file"
+                                    title={
+                                      (currentUser.role === 'admin' || currentUser.role === 'owner') ? "Download file" :
+                                      !currentUser.isApproved ? "Pending approval - access restricted" :
+                                      currentUser.groupId !== activeId ? "You can only download files from your own team" :
+                                      "Download file"
+                                    }
                                   >
                                     <FiDownload size={14} />
                                     Download
