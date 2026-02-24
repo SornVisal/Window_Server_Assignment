@@ -33,7 +33,18 @@ function App() {
     // Check session every 30 seconds
     const interval = setInterval(checkAuth, 30000);
 
-    return () => clearInterval(interval);
+    const handleAuthChange = () => {
+      checkAuth();
+    };
+
+    window.addEventListener('authchange', handleAuthChange);
+    window.addEventListener('storage', handleAuthChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('authchange', handleAuthChange);
+      window.removeEventListener('storage', handleAuthChange);
+    };
   }, []);
 
   // Show loading while checking authentication

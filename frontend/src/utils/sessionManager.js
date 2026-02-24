@@ -32,6 +32,7 @@ export const sessionManager = {
    */
   setLoginSession: () => {
     localStorage.setItem('loginTimestamp', Date.now().toString());
+    window.dispatchEvent(new Event('authchange'));
   },
 
   /**
@@ -41,6 +42,7 @@ export const sessionManager = {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('currentUser');
     localStorage.removeItem('loginTimestamp');
+    window.dispatchEvent(new Event('authchange'));
   },
 
   /**
