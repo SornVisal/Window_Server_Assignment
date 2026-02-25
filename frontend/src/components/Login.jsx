@@ -1,5 +1,5 @@
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { sessionManager } from '../utils/sessionManager';
 
@@ -30,6 +30,20 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [passwordChecks, setPasswordChecks] = useState(null);
+
+  // Ensure body can scroll (clear any overflow:hidden from other components)
+  useEffect(() => {
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
+    return () => {
+      // Keep it clean on unmount too
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    };
+  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -106,7 +120,7 @@ export default function Login() {
   };
 
   return (
-    <div className="h-screen bg-white flex overflow-auto">
+    <div className="min-h-screen bg-white flex overflow-auto">
       {/* Left Side - Image/Branding */}
       <div className="hidden lg:flex lg:w-[37.5%] relative" style={{backgroundColor: '#831717'}}>
         <div className="absolute inset-0 flex flex-col items-center justify-center p-12">
