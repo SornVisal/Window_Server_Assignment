@@ -633,55 +633,6 @@ export default function Group_page() {
             </div>
           )}
 
-          {/* Team Selection Modal */}
-          {showTeamModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-              <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full my-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Select Your Team</h2>
-                <p className="text-sm text-gray-600 mb-6">Choose a team to join. You can change teams later.</p>
-                <div className="space-y-3 max-h-[60vh] overflow-y-auto mb-6">
-                  {groups.map((group) => {
-                    const memberCount = group.memberCount ?? 0;
-                    const isFull = memberCount >= maxTeamMembers;
-                    const tone = getMemberTone(memberCount);
-                    return (
-                      <button
-                        key={group.id}
-                        onClick={() => handleJoinTeam(group.id)}
-                        disabled={isFull}
-                        className="w-full text-left p-4 border-2 rounded transition disabled:opacity-60 disabled:cursor-not-allowed"
-                        style={{borderColor: '#E5E7EB'}}
-                        onMouseOver={(e) => !isFull && (e.currentTarget.style.backgroundColor = '#F9FAFB')}
-                        onMouseOut={(e) => !isFull && (e.currentTarget.style.backgroundColor = 'transparent')}
-                        title={isFull ? 'Team is full (max 10 members)' : 'Join team'}
-                      >
-                        <div className="flex items-center justify-between">
-                          <p className="font-semibold text-gray-900">{group.name}</p>
-                          {isFull && (
-                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{backgroundColor: '#FEE2E2', color: '#991B1B'}}>
-                              Full
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-600">Leader: {group.leaderName || 'TBD'}</p>
-                        <p className="text-xs" style={{color: tone.text}}>Members: {memberCount}/{maxTeamMembers}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-                <button
-                  onClick={() => setShowTeamModal(false)}
-                  className="w-full px-4 py-2 border-2 rounded font-semibold transition"
-                  style={{borderColor: '#E5E7EB', color: '#374151'}}
-                  onMouseOver={(e) => e.target.style.backgroundColor = '#F3F4F6'}
-                  onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8 max-w-7xl mx-auto">
@@ -1062,6 +1013,51 @@ export default function Group_page() {
     </div>
 
     {/* Modals - outside blur wrapper */}
+    {/* Team Selection Modal */}
+    {showTeamModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full my-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Select Your Team</h2>
+          <p className="text-sm text-gray-600 mb-6">Choose a team to join. You can change teams later.</p>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto mb-6">
+            {groups.map((group) => {
+              const memberCount = group.memberCount ?? 0;
+              const isFull = memberCount >= maxTeamMembers;
+              const tone = getMemberTone(memberCount);
+              return (
+                <button
+                  key={group.id}
+                  onClick={() => handleJoinTeam(group.id)}
+                  disabled={isFull}
+                  className="w-full text-left p-4 border-2 rounded transition disabled:opacity-60 disabled:cursor-not-allowed hover:bg-gray-50"
+                  style={{borderColor: '#E5E7EB'}}
+                  title={isFull ? 'Team is full (max 10 members)' : 'Join team'}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-gray-900">{group.name}</p>
+                    {isFull && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{backgroundColor: '#FEE2E2', color: '#991B1B'}}>
+                        Full
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-600">Leader: {group.leaderName || 'TBD'}</p>
+                  <p className="text-xs" style={{color: tone.text}}>Members: {memberCount}/{maxTeamMembers}</p>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={() => setShowTeamModal(false)}
+            className="w-full px-4 py-2 border-2 rounded font-semibold transition hover:bg-gray-50"
+            style={{borderColor: '#E5E7EB', color: '#374151'}}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )}
+
     {showEditModal && (
       <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
         <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full my-8">
