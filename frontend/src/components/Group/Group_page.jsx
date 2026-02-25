@@ -635,11 +635,11 @@ export default function Group_page() {
 
           {/* Team Selection Modal */}
           {showTeamModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+              <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full my-8">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Select Your Team</h2>
                 <p className="text-sm text-gray-600 mb-6">Choose a team to join. You can change teams later.</p>
-                <div className="space-y-3 max-h-96 overflow-y-auto mb-6">
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto mb-6">
                   {groups.map((group) => {
                     const memberCount = group.memberCount ?? 0;
                     const isFull = memberCount >= maxTeamMembers;
@@ -1063,8 +1063,8 @@ export default function Group_page() {
 
     {/* Modals - outside blur wrapper */}
     {showEditModal && (
-      <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full max-h-screen overflow-y-auto">
+      <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full my-8">
           <h3 className="text-lg font-bold text-gray-900 mb-3">Edit Submission</h3>
           <p className="text-sm text-gray-600 mb-4">Update the submission title.</p>
           <div className="space-y-4">
@@ -1149,8 +1149,8 @@ export default function Group_page() {
     )}
 
     {showDeleteModal && (
-      <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50 overflow-hidden">
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full max-h-screen overflow-y-auto">
+      <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full my-8">
           <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Submission</h3>
           <p className="text-sm text-gray-600 mb-5">This action cannot be undone.</p>
           <div className="flex gap-3 justify-end">

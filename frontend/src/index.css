@@ -18,17 +18,11 @@
 		box-sizing: border-box;
 	}
 
-	html {
-		overflow: auto !important;
-		height: 100%;
-	}
-
 	body {
 		font-family: "Space Grotesk", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 		color: var(--ink-900);
 		background: radial-gradient(1200px 800px at 10% -10%, #e8f1ff 0%, #ffffff 55%, #f7f3ff 100%);
 		min-height: 100vh;
-		overflow: auto !important;
 	}
 
 	h1,
