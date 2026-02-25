@@ -1015,7 +1015,7 @@ export default function Group_page() {
     {/* Modals - outside blur wrapper */}
     {/* Team Selection Modal */}
     {showTeamModal && (
-      <div className="fixed inset-0 bg-white bg-opacity-60 backdrop-blur-[2px] flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto">
         <div className="bg-white rounded-lg shadow-2xl border-2 p-8 max-w-md w-full my-8" style={{borderColor: '#831717'}}>
           <h2 className="text-xl font-bold text-gray-900 mb-4">Select Your Team</h2>
           <p className="text-sm text-gray-600 mb-6">Choose a team to join. You can change teams later.</p>
