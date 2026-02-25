@@ -70,7 +70,7 @@ export default function Group_page() {
   const canViewDownload = isAdminOwner || ((isLeader || isMember) && isGroupMatch);
   const canEdit = isAdminOwner || (isLeader && isGroupMatch);
   const canDelete = isAdminOwner || (isLeader && isGroupMatch);
-  const isOverlayOpen = showEditModal || showDeleteModal || showTeamModal;
+  const isOverlayOpen = showEditModal || showDeleteModal;
 
   // Filter groups based on user role
   const visibleGroups = useMemo(() => {
@@ -1015,8 +1015,8 @@ export default function Group_page() {
     {/* Modals - outside blur wrapper */}
     {/* Team Selection Modal */}
     {showTeamModal && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full my-8">
+      <div className="fixed inset-0 bg-white bg-opacity-60 backdrop-blur-[2px] flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="bg-white rounded-lg shadow-2xl border-2 p-8 max-w-md w-full my-8" style={{borderColor: '#831717'}}>
           <h2 className="text-xl font-bold text-gray-900 mb-4">Select Your Team</h2>
           <p className="text-sm text-gray-600 mb-6">Choose a team to join. You can change teams later.</p>
           <div className="space-y-3 max-h-[60vh] overflow-y-auto mb-6">
