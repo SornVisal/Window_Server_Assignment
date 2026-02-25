@@ -1014,9 +1014,23 @@ export default function Group_page() {
 
     {/* Modals - outside blur wrapper */}
     {/* Team Selection Modal */}
-    {showTeamModal && (
-      <div className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto">
-        <div className="bg-white rounded-lg shadow-2xl border-2 p-8 max-w-md w-full my-8" style={{borderColor: '#831717'}}>
+    <AnimatePresence>
+      {showTeamModal && (
+        <motion.div 
+          className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <motion.div 
+            className="bg-white rounded-lg shadow-2xl border-2 p-8 max-w-md w-full my-8" 
+            style={{borderColor: '#831717'}}
+            initial={{ scale: 0.8, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.8, y: 20 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
           <h2 className="text-xl font-bold text-gray-900 mb-4">Select Your Team</h2>
           <p className="text-sm text-gray-600 mb-6">Choose a team to join. You can change teams later.</p>
           <div className="space-y-3 max-h-[60vh] overflow-y-auto mb-6">
@@ -1054,9 +1068,9 @@ export default function Group_page() {
           >
             Cancel
           </button>
-        </div>
-      </div>
-    )}
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
 
     {showEditModal && (
       <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
