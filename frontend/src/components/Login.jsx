@@ -120,9 +120,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex overflow-auto">
+    <div className="min-h-screen bg-white flex" style={{height: '100vh', maxHeight: '100vh'}}>
       {/* Left Side - Image/Branding */}
-      <div className="hidden lg:flex lg:w-[37.5%] relative" style={{backgroundColor: '#831717'}}>
+      <div className="hidden lg:flex lg:w-[37.5%] relative overflow-hidden" style={{backgroundColor: '#831717'}}>
         <div className="absolute inset-0 flex flex-col items-center justify-center p-12">
           <img 
             src="/rupp_logo.png" 
@@ -138,8 +138,8 @@ export default function Login() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-[62.5%] flex items-center justify-center px-6 sm:px-12 lg:px-16">
-        <div className="w-full max-w-md">
+      <div className="w-full lg:w-[62.5%] flex flex-col justify-center px-6 sm:px-12 lg:px-16 py-8 overflow-y-auto">
+        <div className="w-full max-w-md mx-auto">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center mb-8">
             <img 
