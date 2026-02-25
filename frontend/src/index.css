@@ -18,6 +18,11 @@
 		box-sizing: border-box;
 	}
 
+	html, body {
+		overflow-x: hidden;
+		overflow-y: auto;
+	}
+
 	body {
 		font-family: "Space Grotesk", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 		color: var(--ink-900);

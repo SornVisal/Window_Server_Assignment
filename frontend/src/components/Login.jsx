@@ -33,8 +33,8 @@ export default function Login() {
 
   // Ensure body can scroll (clear any overflow:hidden from other components)
   useEffect(() => {
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
+    document.documentElement.style.overflow = 'auto';
+    document.body.style.overflow = 'auto';
     document.body.style.paddingRight = '';
     
     return () => {
