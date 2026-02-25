@@ -1070,7 +1070,8 @@ export default function Group_page() {
           </button>
           </motion.div>
         </motion.div>
-      </AnimatePresence>
+      )}
+    </AnimatePresence>
 
     {showEditModal && (
       <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
