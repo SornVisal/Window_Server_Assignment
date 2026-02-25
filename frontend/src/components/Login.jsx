@@ -106,7 +106,7 @@ export default function Login() {
   };
 
   return (
-    <div className="h-screen bg-white flex overflow-hidden">
+    <div className="h-screen bg-white flex overflow-auto">
       {/* Left Side - Image/Branding */}
       <div className="hidden lg:flex lg:w-[37.5%] relative" style={{backgroundColor: '#831717'}}>
         <div className="absolute inset-0 flex flex-col items-center justify-center p-12">
