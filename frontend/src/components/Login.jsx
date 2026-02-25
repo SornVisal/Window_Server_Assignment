@@ -33,12 +33,20 @@ export default function Login() {
 
   // Ensure body can scroll (clear any overflow:hidden from other components)
   useEffect(() => {
-    document.documentElement.style.overflow = 'auto';
-    document.body.style.overflow = 'auto';
-    document.body.style.paddingRight = '';
+    // Force remove any overflow restrictions
+    const forceScroll = () => {
+      document.documentElement.style.cssText = 'overflow: auto !important;';
+      document.body.style.cssText = document.body.style.cssText.replace(/overflow[^;]*;?/g, '') + 'overflow: visible !important;';
+      document.body.style.paddingRight = '';
+    };
+    
+    forceScroll();
+    
+    // Keep forcing it in case something else tries to change it
+    const interval = setInterval(forceScroll, 100);
     
     return () => {
-      // Keep it clean on unmount too
+      clearInterval(interval);
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';

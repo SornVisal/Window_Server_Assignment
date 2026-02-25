@@ -96,14 +96,15 @@ export default function Group_page() {
         document.body.style.paddingRight = scrollbarWidth + 'px';
       }
     } else {
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
+      document.documentElement.style.overflow = 'auto';
+      document.body.style.overflow = 'visible';
       document.body.style.paddingRight = '';
     }
     
     return () => {
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
+      // Always restore scroll on unmount
+      document.documentElement.style.overflow = 'auto';
+      document.body.style.overflow = 'visible';
       document.body.style.paddingRight = '';
     };
   }, [isOverlayOpen]);
